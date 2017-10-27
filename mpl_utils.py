@@ -21,5 +21,6 @@ def plot_mvnormal(mean=np.array([0.0, 0.0]), cov=np.array([[1,0.0],[0.0,1]]), ax
     ax.contour(X, Y, Z, **kwargs)
     ax.set_xlim((0,10))
     ax.set_ylim((0,10))
+    ax.axis('equal')
     
     return f, ax
