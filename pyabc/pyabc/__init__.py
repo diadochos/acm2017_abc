@@ -1,2 +1,2 @@
-from sampler import RejectionSampler
-from sampler import SMCSampler
+from .sampler import RejectionSampler
+from .sampler import SMCSampler
