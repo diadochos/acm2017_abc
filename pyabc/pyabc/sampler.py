@@ -206,26 +206,31 @@ class RejectionSampler(BaseSampler):
                             break
 
             end = time.clock()
+            run += 1
             self.nr_iter.append(nr_iter)
             self.Thetas.append(thetas)
 
             if self.verbosity == 1:
-                print("Run: %2d - Samples: %6d - Iterations: %10d - Time: %8.2f s" % (run+1, self.nr_samples, self.nr_iter[-1], end - start))
+                print("Run: %2d - Samples: %6d - Threshold: %.2f - Iterations: %10d - Time: %8.2f s" % (run, self.nr_samples, epsilon, self.nr_iter[-1], end - start))
 
     def plot_marginals(self, names=[]):
         """func doc"""
         if len(self.Thetas) == 0:
             self._eprint("{}: Method plot_marginals() called before sampling was done".format(type(self).__name__))
 
-        nr_plots = len(self.Thetas[-1])
-        fig, ax = plt.subplots(nr_plots // 2 + nr_plots % 2, 2)
+        for epsilon in self.thresholds:
 
-        for plot_id, hist in enumerate(self.Thetas[-1]):
-            _ax = ax[plot_id]
-            _ax.hist(hist, edgecolor="k", bins='auto')
-            if names:
-               _ax.set_xlabel(names[plot_id])
-        plt.show()
+            nr_plots = len(self.Thetas[-1])
+            fig, ax = plt.subplots(1, nr_plots)
+
+            for plot_id, hist in enumerate(self.Thetas[-1]):
+                _ax = ax[plot_id]
+                _ax.hist(hist, edgecolor="k", bins='auto')
+                if names:
+                   _ax.set_xlabel(names[plot_id])
+
+            fig.suptitle("Posterior for all model parameters that with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(epsilon, self.nr_samples))
+            plt.show()
 
     def __str__(self):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(

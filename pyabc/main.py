@@ -43,14 +43,21 @@ print(rej_samp)
 
 threshold = .5
 nr_samples = 1000
-rej_samp.sample(threshold, nr_samples)
+#rej_samp.sample(threshold, nr_samples)
 
 rej_samp.plot_marginals(["mu", "sigma"])
 
 # var 2 -> constructor
-rej_samp = pyabc.RejectionSampler(priors=[prior_mu, prior_sigma], simulator=simulator, summaries=[summary_var, summary_mean], verbosity=1)
-rej_samp.sample(threshold, nr_samples)
-rej_samp = pyabc.RejectionSampler(priors=[prior_mu, prior_sigma], simulator=simulator, summaries=[summary_var, summary_mean], observation=y0, verbosity=1)
-rej_samp.sample(threshold, nr_samples)
+#rej_samp = pyabc.RejectionSampler(priors=[prior_mu, prior_sigma], simulator=simulator, summaries=[summary_var, summary_mean], verbosity=1)
+#rej_samp.sample(threshold, nr_samples)
+#rej_samp = pyabc.RejectionSampler(priors=[prior_mu, prior_sigma], simulator=simulator, summaries=[summary_var, summary_mean], observation=y0, verbosity=1)
+#rej_samp.sample(threshold, nr_samples)
+
+rej_samp.plot_marginals(["mu", "sigma"])
+
+# several thresholds for one run
+thresholds = [3,1,0.5,0.3]
+nr_samples = 500
+rej_samp.sample(thresholds, nr_samples)
 
 rej_samp.plot_marginals(["mu", "sigma"])
