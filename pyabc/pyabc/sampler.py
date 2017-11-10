@@ -222,7 +222,7 @@ class RejectionSampler(BaseSampler):
 
         for plot_id, hist in enumerate(self.Thetas[-1]):
             _ax = ax[plot_id]
-            _ax.hist(hist)
+            _ax.hist(hist, edgecolor="k", bins='auto')
             if names:
                _ax.set_xlabel(names[plot_id])
         plt.show()
