@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import time
 import pylab as plt
+import warnings
 
 
 class BaseSampler(metaclass=abc.ABCMeta):
@@ -67,7 +68,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
             self.summaries = np.hstack((self.summaries, summary))
         else:
             raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, summary))
-            sys.exit(1)
 
     def add_prior(self, prior):
         """func doc"""
@@ -75,7 +75,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
             self.priors = np.hstack((self.priors, prior))
         else:
             raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, prior))
-            sys.exit(1)
 
     def set_discrepancy(self, disc):
         """func doc"""
@@ -83,7 +82,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
             self.discrepancy = disc
         else:
             raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, disc))
-            sys.exit(1)
 
     def set_observation(self, obs):
         """func doc"""
@@ -95,7 +93,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
                 self.observation = obs
             except (TypeError, ValueError, RuntimeError):
                 self TypeError("{}: Passed argument {} cannot be parsed by numpy.atleast_1d()!".format(type(self).__name__, obs))
-                sys.exit(1)
 
     def set_verbosity(self, lvl):
         """set verbosity level of print messages. Possible values are 0, 1, and 2"""
@@ -103,7 +100,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
             self.verbosity = lvl
         else:
             raise ValueError("{}: Passed argument {} has to be integer and between [0,2].".format(type(self).__name__, lvl))
-            sys.exit(1)
 
     @abc.abstractmethod
     def sample(self):
@@ -169,7 +165,7 @@ class RejectionSampler(BaseSampler):
             raise TypeError("{}: Passed argument {} has to be integer.".format(type(self).__name__, nr_samples))
 
         if self.simulator is None or len(self.priors) == 0 or len(self.observation) == 0 or (len(self.summaries) == 0 and self.discrepancy is None):
-            raise RuntimeError("{}: Method sample() called before all necessary functions are set (prior, simulatior, observation, summaries).".format(type(self).__name__))
+            warnings.warn("{}: Method sample() called before all necessary functions are set (prior, simulatior, observation, summaries).".format(type(self).__name__))
             return
 
         print("Rejection sampler started with thresholds: {} and number of samples: {}".format(self.thresholds, self.nr_samples))
@@ -219,7 +215,8 @@ class RejectionSampler(BaseSampler):
     def plot_marginals(self, names=[]):
         """func doc"""
         if len(self.Thetas) == 0:
-            raise RuntimeError("{}: Method plot_marginals() called before sampling was done".format(type(self).__name__))
+            warnings.warn("{}: Method plot_marginals() called before sampling was done".format(type(self).__name__))
+            return
 
         for epsilon in self.thresholds: # TODO: no loop
 
