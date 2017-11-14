@@ -113,6 +113,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
     def plot_marginals(self):
         pass
 
+    # TODO: refactor to use own Exception Classes/throw Exceptions
     def _eprint(self, *args, **kwargs):
         print(*args, file=sys.stderr, **kwargs)
 
@@ -176,6 +177,7 @@ class RejectionSampler(BaseSampler):
         self.nr_iter = [] # reset
         self.Thetas = [] # reset
 
+        # TODO: keine Liste von Thresholds
         for epsilon in self.thresholds:
             X = self.observation
             nr_iter = 0
@@ -185,9 +187,10 @@ class RejectionSampler(BaseSampler):
             for i in range(self.nr_samples):
                 while True:
                     nr_iter += 1
-                    thetas_prop = [p() for p in self.priors] # draw as many thetas as there are priors
+                    thetas_prop = [p() for p in self.priors] # draw as many thetas as there are priors # TODO:split return of multivariate prior
                     Y = self.simulator(*thetas_prop) # unpack thetas as single arguments for simulator
 
+                    # TODO: summary stats for all -> default euclidean
                     if self.discrepancy is None:
                         stat_vec_x = np.hstack((s(X) for s in self.summaries))
                         stat_vec_y = np.hstack((s(Y) for s in self.summaries))
@@ -208,7 +211,7 @@ class RejectionSampler(BaseSampler):
             end = time.clock()
             run += 1
             self.nr_iter.append(nr_iter)
-            self.Thetas.append(thetas)
+            self.Thetas.append(thetas) # TODO: change to 2d
 
             if self.verbosity == 1:
                 print("Run: %2d - Samples: %6d - Threshold: %.2f - Iterations: %10d - Time: %8.2f s" % (run, self.nr_samples, epsilon, self.nr_iter[-1], end - start))
@@ -218,7 +221,7 @@ class RejectionSampler(BaseSampler):
         if len(self.Thetas) == 0:
             self._eprint("{}: Method plot_marginals() called before sampling was done".format(type(self).__name__))
 
-        for epsilon in self.thresholds:
+        for epsilon in self.thresholds: # TODO: no loop
 
             nr_plots = len(self.Thetas[-1])
             fig, ax = plt.subplots(1, nr_plots)
