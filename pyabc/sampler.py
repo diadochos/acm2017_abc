@@ -87,7 +87,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     def set_observation(self, obs):
         """func doc"""
-        if obs is None or (type(obs) == list and len(obs) == 0):
+        if obs is None or (isinstance(obs, list) and len(obs) == 0):
             self.observation = np.empty(0)
         else:
             try:
@@ -99,7 +99,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     def set_verbosity(self, lvl):
         """set verbosity level of print messages. Possible values are 0, 1, and 2"""
-        if type(lvl) == int and lvl >= 0 and lvl <= 2:
+        if isinstance(lvl, int) and lvl >= 0 and lvl <= 2:
             self.verbosity = lvl
         else:
             self._eprint("{}: Passed argument {} has to be integer and between [0,2].".format(type(self).__name__, lvl))
@@ -135,8 +135,12 @@ class RejectionSampler(BaseSampler):
 
     """
 
-    def __init__(self, priors=[], simulator=None, observation=None, discrepancy=None, summaries=[], verbosity=1):
+    def __init__(self, priors=None, simulator=None, observation=None, discrepancy=None, summaries=None, verbosity=1):
         """constructor"""
+        if prior is None:
+            priors = []
+        if summaries is None:
+            summaries = []
         self.set_priors(priors)
         self.set_simulator(simulator)
         self.set_observation(observation)
@@ -163,7 +167,7 @@ class RejectionSampler(BaseSampler):
         else:
             self._eprint("{}: Passed argument {} has to be float or a list of floats.".format(type(self).__name__, thresholds))
 
-        if type(nr_samples) == int:
+        if isinstance(nr_samples, int)
             self.nr_samples = nr_samples
         else:
             self._eprint("{}: Passed argument {} has to be integer.".format(type(self).__name__, nr_samples))
@@ -242,7 +246,44 @@ class RejectionSampler(BaseSampler):
 
 """class doc"""
 class SMCSampler(object):
-    pass
+
+    def __init__(self, priors=None, simulator=None, observation=None, discrepancy=None, summaries=None, verbosity=1):
+        if prior is None:
+            priors = []
+        if summaries is None:
+            summaries = []
+        self.set_priors(priors)
+        self.set_simulator(simulator)
+        self.set_observation(observation)
+        self.set_discrepancy(discrepancy)
+        self.set_summaries(summaries)
+        self.set_verbosity(verbosity)
+
+    def sample():
+        """Draw samples using Sequential Monte Carlo.
+
+        Args:
+            thresholds: list of acceptance threshold. len(thresholds defines number of SMC iterations)
+            nr_particles: Number of particles used to represent the distribution
+
+        Returns:
+            Nothing
+
+        """
+        if not thresholds:
+            raise ValueError("There must be at least one threshold value.")
+
+        T = len(thresholds)
+
+        for t in range(T):
+            pass
+
+
+
+    def plot_marginals():
+        pass
+
+
 
 
 if __name__ == '__main__':
