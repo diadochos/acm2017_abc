@@ -178,9 +178,9 @@ class RejectionSampler(BaseSampler):
         ret = np.empty(0)
         for f in list_of_f:
             if args is None:
-                ret = np.concatenate((ret, np.atleast_1d(f())))
+                ret = np.concatenate((ret, np.atleast_1d(f().flatten())))
             else:
-                ret = np.concatenate((ret, np.atleast_1d(f(args))))
+                ret = np.concatenate((ret, np.atleast_1d(f(args).flatten())))
 
         return ret
 
@@ -203,6 +203,9 @@ class RejectionSampler(BaseSampler):
                 thetas_prop = self.sample_from_priors()  # draw as many thetas as there are priors
                 Y = self.simulator(*thetas_prop)  # unpack thetas as single arguments for simulator
                 stat_vec_y = self._flatten_function(self.summaries, args=Y)
+
+                if stat_vec_x.shape != stat_vec_y.shape:
+                    raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(stat_vec_x.shape, stat_vec_y.shape))
 
                 # either use predefined distance function or user defined discrepancy function
                 if self.discrepancy is None:
