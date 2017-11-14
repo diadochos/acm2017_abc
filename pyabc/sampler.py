@@ -143,7 +143,7 @@ class RejectionSampler(BaseSampler):
 
     """
 
-    def __init__(self, priors=None, simulator=None, observation=None, discrepancy=None, summaries=None, verbosity=1):
+    def __init__(self, priors=None, simulator=None, observation=None, discrepancy=None, summaries=None, verbosity=1, seed=None):
         """constructor"""
         if priors is not None:
             self.set_priors(priors)
@@ -155,6 +155,8 @@ class RejectionSampler(BaseSampler):
             self.set_discrepancy(discrepancy)
         if summaries is not None:
             self.set_summaries(summaries)
+        if seed is not None:
+            np.random.seed(seed)
 
         self.set_verbosity(verbosity)
 
