@@ -40,7 +40,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
         if callable(sim) or sim is None:
             self.simulator = sim
         else:
-            self._eprint("{}: Passed argument {} is not a callable function!".format(type(self).__name__, sim))
+            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, sim))
             sys.exit(1)
 
     def set_priors(self, priors):
@@ -49,7 +49,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
         if all(callable(p) for p in priors) or len(priors) == 0:
             self.priors = priors
         else:
-            self._eprint("{}: Passed argument {} is not a callable function!".format(type(self).__name__, priors))
+            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, priors))
             sys.exit(1)
 
     def set_summaries(self, summaries):
@@ -58,7 +58,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
         if all(callable(s) for s in summaries) or len(summaries) == 0:
             self.summaries = summaries
         else:
-            self._eprint("{}: Passed argument {} is not a callable function or list of functions!".format(type(self).__name__, summaries))
+            raise TypeError("{}: Passed argument {} is not a callable function or list of functions!".format(type(self).__name__, summaries))
             sys.exit(1)
 
     def add_summary(self, summary):
@@ -66,7 +66,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
         if callable(summary):
             self.summaries = np.hstack((self.summaries, summary))
         else:
-            self._eprint("{}: Passed argument {} is not a callable function!".format(type(self).__name__, summary))
+            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, summary))
             sys.exit(1)
 
     def add_prior(self, prior):
@@ -74,7 +74,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
         if callable(prior):
             self.priors = np.hstack((self.priors, prior))
         else:
-            self._eprint("{}: Passed argument {} is not a callable function!".format(type(self).__name__, prior))
+            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, prior))
             sys.exit(1)
 
     def set_discrepancy(self, disc):
@@ -82,7 +82,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
         if callable(disc) or disc is None:
             self.discrepancy = disc
         else:
-            self._eprint("{}: Passed argument {} is not a callable function!".format(type(self).__name__, disc))
+            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, disc))
             sys.exit(1)
 
     def set_observation(self, obs):
@@ -94,7 +94,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
                 obs = np.atleast_1d(obs)
                 self.observation = obs
             except (TypeError, ValueError, RuntimeError):
-                self._eprint("{}: Passed argument {} cannot be parsed by numpy.atleast_1d()!".format(type(self).__name__, obs))
+                self TypeError("{}: Passed argument {} cannot be parsed by numpy.atleast_1d()!".format(type(self).__name__, obs))
                 sys.exit(1)
 
     def set_verbosity(self, lvl):
@@ -102,7 +102,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
         if isinstance(lvl, int) and lvl >= 0 and lvl <= 2:
             self.verbosity = lvl
         else:
-            self._eprint("{}: Passed argument {} has to be integer and between [0,2].".format(type(self).__name__, lvl))
+            raise ValueError("{}: Passed argument {} has to be integer and between [0,2].".format(type(self).__name__, lvl))
             sys.exit(1)
 
     @abc.abstractmethod
@@ -112,10 +112,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def plot_marginals(self):
         pass
-
-    # TODO: refactor to use own Exception Classes/throw Exceptions
-    def _eprint(self, *args, **kwargs):
-        print(*args, file=sys.stderr, **kwargs)
 
 
 class RejectionSampler(BaseSampler):
@@ -165,15 +161,15 @@ class RejectionSampler(BaseSampler):
         if all(isinstance(x, float) for x in thresholds):
             self.thresholds = thresholds
         else:
-            self._eprint("{}: Passed argument {} has to be float or a list of floats.".format(type(self).__name__, thresholds))
+            raise TypeError("{}: Passed argument {} has to be float or a list of floats.".format(type(self).__name__, thresholds))
 
         if isinstance(nr_samples, int)
             self.nr_samples = nr_samples
         else:
-            self._eprint("{}: Passed argument {} has to be integer.".format(type(self).__name__, nr_samples))
+            raise TypeError("{}: Passed argument {} has to be integer.".format(type(self).__name__, nr_samples))
 
         if self.simulator is None or len(self.priors) == 0 or len(self.observation) == 0 or (len(self.summaries) == 0 and self.discrepancy is None):
-            self._eprint("{}: Method sample() called before all necessary functions are set (prior, simulatior, observation, summaries).".format(type(self).__name__))
+            raise RuntimeError("{}: Method sample() called before all necessary functions are set (prior, simulatior, observation, summaries).".format(type(self).__name__))
             return
 
         print("Rejection sampler started with thresholds: {} and number of samples: {}".format(self.thresholds, self.nr_samples))
@@ -223,7 +219,7 @@ class RejectionSampler(BaseSampler):
     def plot_marginals(self, names=[]):
         """func doc"""
         if len(self.Thetas) == 0:
-            self._eprint("{}: Method plot_marginals() called before sampling was done".format(type(self).__name__))
+            raise RuntimeError("{}: Method plot_marginals() called before sampling was done".format(type(self).__name__))
 
         for epsilon in self.thresholds: # TODO: no loop
 
