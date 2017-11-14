@@ -25,81 +25,89 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     """
 
+    # single value parameters
+    simulator = None  # callable function used to simulate data, has to be comparable to observation
+    discrepancy = None  # own discrepancy function which uses the summary functions to compute a distance measure: f: R^nxm x R^nxm x ...-> R^1
+    nr_iter = 0  # list of number of iterations for each sampling process
+    threshold = 0  # list of threshholds used to accept or reject samples
+    nr_samples = 0  # list of accepted samples per iteration
+    verbosity = 0  # level of debug messages
+    runtime = 0 # runtime of abc rejection sampler
+
+    # list value parameters
     priors = [] # list of callable functions used to sample thetas
-    simulator = None # callable function used to simulate data, has to be comparable to observation
-    observation = np.empty(0) # observed data, can be any numerical numpy array format R^nxm
-    discrepancy = None # own discrepancy function which operates on the data and gives a distance measure: f: R^nxm x R^nxm -> R^1
     summaries = []  # list of summary statistics, each a callabe function of type f: R^nxm -> R^1 (accepts numerical data and give working with simulation and observational data
-    nr_iter = [] # list of number of iterations for each sampling process
-    thresholds = [] # list of threshholds used to accept or reject samples
-    nr_samples = 0 # list of accepted samples per iteration
-    Thetas = [] # list of all samples drawn from all posterios for each iteration [[[theta11,theta12,...,theta1n],[theta21,theta22,...,theta2n]],[[theta11,theta12,...],[]]]
-    verbosity = 0 # level of debug messages
+
+    # dict value parameters
+    distances = {
+        'euclidean': lambda x,y: np.linalg.norm(x-y)
+    }
+
+    # array value parameters
+    observation = np.empty(0) # observed data, can be any numerical numpy array format R^nxm
+    Thetas = np.empty(0)  # matrix with all accepted samples for each model parameter. One column represents all samples of one parameter
 
     def set_simulator(self, sim):
         """func doc"""
-        if callable(sim) or sim is None:
+        if callable(sim):
             self.simulator = sim
         else:
-            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, sim))
-            sys.exit(1)
+            raise TypeError("Passed argument {} is not a callable function!".format(sim))
 
     def set_priors(self, priors):
         """func doc"""
         priors = np.atleast_1d(priors)
-        if all(callable(p) for p in priors) or len(priors) == 0:
+        if all(callable(p) for p in priors):
             self.priors = priors
         else:
-            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, priors))
-            sys.exit(1)
+            raise TypeError("Passed argument {} is not a callable function or list of functions!".format(priors))
 
     def set_summaries(self, summaries):
         """func doc"""
         summaries = np.atleast_1d(summaries)
-        if all(callable(s) for s in summaries) or len(summaries) == 0:
+        if all(callable(s) for s in summaries):
             self.summaries = summaries
         else:
-            raise TypeError("{}: Passed argument {} is not a callable function or list of functions!".format(type(self).__name__, summaries))
-            sys.exit(1)
+            raise TypeError("Passed argument {} is not a callable function or list of functions!".format(summaries))
 
     def add_summary(self, summary):
         """func doc"""
         if callable(summary):
             self.summaries = np.hstack((self.summaries, summary))
         else:
-            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, summary))
+            raise TypeError("Passed argument {} is not a callable function!".format(summary))
 
     def add_prior(self, prior):
         """func doc"""
         if callable(prior):
             self.priors = np.hstack((self.priors, prior))
         else:
-            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, prior))
+            raise TypeError("Passed argument {} is not a callable function!".format(prior))
 
     def set_discrepancy(self, disc):
         """func doc"""
-        if callable(disc) or disc is None:
+        if callable(disc):
             self.discrepancy = disc
         else:
-            raise TypeError("{}: Passed argument {} is not a callable function!".format(type(self).__name__, disc))
+            raise TypeError("Passed argument {} is not a callable function!".format(disc))
 
     def set_observation(self, obs):
         """func doc"""
-        if obs is None or (isinstance(obs, list) and len(obs) == 0):
-            self.observation = np.empty(0)
-        else:
-            try:
-                obs = np.atleast_1d(obs)
-                self.observation = obs
-            except (TypeError, ValueError, RuntimeError):
-                self TypeError("{}: Passed argument {} cannot be parsed by numpy.atleast_1d()!".format(type(self).__name__, obs))
+        try:
+            obs = np.atleast_1d(obs)
+            self.observation = obs
+        except (TypeError):
+            raise TypeError("Passed argument {} cannot be parsed by numpy.atleast_1d()!".format(obs))
 
     def set_verbosity(self, lvl):
         """set verbosity level of print messages. Possible values are 0, 1, and 2"""
-        if isinstance(lvl, int) and lvl >= 0 and lvl <= 2:
-            self.verbosity = lvl
+        if isinstance(lvl, int):
+            if lvl >= 0 and lvl <= 2:
+                self.verbosity = lvl
+            else:
+                raise ValueError("Passed argument {} has to be one of {0,1,2}.".format(lvl))
         else:
-            raise ValueError("{}: Passed argument {} has to be integer and between [0,2].".format(type(self).__name__, lvl))
+            raise TypeError("Passed argument {} has to be an integer".format(lvl))
 
     @abc.abstractmethod
     def sample(self):
@@ -107,6 +115,14 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def plot_marginals(self):
+        pass
+
+    @abc.abstractmethod
+    def _are_you_fucking_ready(self):
+        pass
+
+    @abc.abstractmethod
+    def _reset(self):
         pass
 
 
@@ -129,108 +145,140 @@ class RejectionSampler(BaseSampler):
 
     def __init__(self, priors=None, simulator=None, observation=None, discrepancy=None, summaries=None, verbosity=1):
         """constructor"""
-        if prior is None:
-            priors = []
-        if summaries is None:
-            summaries = []
-        self.set_priors(priors)
-        self.set_simulator(simulator)
-        self.set_observation(observation)
-        self.set_discrepancy(discrepancy)
-        self.set_summaries(summaries)
+        if priors is not None:
+            self.set_priors(priors)
+        if simulator is not None:
+            self.set_simulator(simulator)
+        if observation is not None:
+            self.set_observation(observation)
+        if discrepancy is not None:
+            self.set_discrepancy(discrepancy)
+        if summaries is not None:
+            self.set_summaries(summaries)
+
         self.set_verbosity(verbosity)
 
+    def _are_you_fucking_ready(self):
+        """check all prerequisites for the sample method to run through"""
+        return self.simulator is not None and len(self.priors) > 0 and len(self.summaries) > 0 and self.observation.shape != (0,)
 
-    def sample(self, thresholds, nr_samples):
+    def _reset(self):
+        """reset class properties for a new call of sample method"""
+        self.nr_iter = []
+        self.Thetas = []
+
+    def sample_from_priors(self):
+        """draw samples from all priors and return as 1d array"""
+        return self._flatten_function(self.priors)
+
+    def _flatten_function(self, list_of_f, args=None):
+        """return function output as 1d array"""
+        ret = np.empty(0)
+        for f in list_of_f:
+            if args is None:
+                ret = np.concatenate((ret, np.atleast_1d(f())))
+            else:
+                ret = np.concatenate((ret, np.atleast_1d(f(args))))
+
+        return ret
+
+
+    def _run_rejection_sampling(self, distance):
+        """the abc rejection sampling algorithm"""
+
+        X = self.observation
+
+        stat_vec_x = self._flatten_function(self.summaries, args=X)
+
+        thetas = np.zeros((self.nr_samples, self.sample_from_priors().shape[0]))
+
+        nr_iter = 0
+        start = time.clock()
+        for i in range(self.nr_samples):
+            while True:
+                nr_iter += 1
+
+                thetas_prop = self.sample_from_priors()  # draw as many thetas as there are priors
+                Y = self.simulator(*thetas_prop)  # unpack thetas as single arguments for simulator
+                stat_vec_y = self._flatten_function(self.summaries, args=Y)
+
+                # either use predefined distance function or user defined discrepancy function
+                if self.discrepancy is None:
+                    d = self.distances[distance](stat_vec_x, stat_vec_y)
+                else:
+                    d = self.discrepancy(stat_vec_x, stat_vec_y)
+
+                if d < self.threshold:
+                    thetas[i, :] = thetas_prop
+                    break
+
+        self.runtime = time.clock() - start
+
+        self.nr_iter = nr_iter
+        self.Thetas = thetas
+
+    def sample(self, threshold, nr_samples, distance='euclidean'):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
 
         Args:
-            thresholds: Single value or list of values. For each threshold, the process samples nr_samples thetas. Threshold is used as acceptance criteria.
+            threshold: Threshold is used as acceptance criteria for samples.
             nr_samples: Number of samples drawn from prior distribution.
+            distance: distance measure to compare summary statistics. (default) euclidean
 
         Returns:
             Nothing
 
         """
         # check all prerequisites
-        thresholds = np.atleast_1d(thresholds)
-        if all(isinstance(x, float) for x in thresholds):
-            self.thresholds = thresholds
+        if isinstance(threshold, (int, float)):
+            if threshold > 0 or np.isclose(threshold, 0):
+                self.threshold = threshold
+            else:
+                raise ValueError("Passed argument {} must not be negative".format(threshold))
         else:
-            raise TypeError("{}: Passed argument {} has to be float or a list of floats.".format(type(self).__name__, thresholds))
+            raise TypeError("Passed argument {} has to be and integer or float.".format(threshold))
 
-        if isinstance(nr_samples, int)
-            self.nr_samples = nr_samples
+        if isinstance(nr_samples, (int,float)):
+            if nr_samples > 0:
+                self.nr_samples = int(nr_samples)
+            else:
+                raise ValueError("Passed argument {} must not be negative".format(nr_samples))
         else:
-            raise TypeError("{}: Passed argument {} has to be integer.".format(type(self).__name__, nr_samples))
+            raise TypeError("Passed argument {} has to be integer.".format(nr_samples))
 
-        if self.simulator is None or len(self.priors) == 0 or len(self.observation) == 0 or (len(self.summaries) == 0 and self.discrepancy is None):
-            warnings.warn("{}: Method sample() called before all necessary functions are set (prior, simulatior, observation, summaries).".format(type(self).__name__))
-            return
+        if distance not in self.distances.keys():
+            raise ValueError("Passed distance function {} is not available. Possible values are {}.".format(distance, self.distances.keys()))
 
-        print("Rejection sampler started with thresholds: {} and number of samples: {}".format(self.thresholds, self.nr_samples))
-        run = 0
-        self.nr_iter = [] # reset
-        self.Thetas = [] # reset
+        if not self._are_you_fucking_ready():
+            raise Warning("At least one necessary function or the observations are not yet set (prior, simulatior, summaries or observation).")
 
-        # TODO: keine Liste von Thresholds
-        for epsilon in self.thresholds:
-            X = self.observation
-            nr_iter = 0
-            start = time.clock()
-            thetas = [[] for i in range(len(self.priors))] # for each theta, one array of all sampled thetas
+        print("Rejection sampler started with threshold: {} and number of samples: {}".format(self.threshold, self.nr_samples))
 
-            for i in range(self.nr_samples):
-                while True:
-                    nr_iter += 1
-                    thetas_prop = [p() for p in self.priors] # draw as many thetas as there are priors # TODO:split return of multivariate prior
-                    Y = self.simulator(*thetas_prop) # unpack thetas as single arguments for simulator
+        self._reset()
 
-                    # TODO: summary stats for all -> default euclidean
-                    if self.discrepancy is None:
-                        stat_vec_x = np.hstack((s(X) for s in self.summaries))
-                        stat_vec_y = np.hstack((s(Y) for s in self.summaries))
-                        d = np.linalg.norm(stat_vec_x - stat_vec_y)
-                        if d < epsilon:
-                            for val,val_prop in zip(thetas, thetas_prop):
-                                val.append(val_prop)
+        # RUN ABC REJECTION SAMPLING
+        self._run_rejection_sampling(distance)
 
-                            break
-                    else:
-                        d = self.discrepancy(X,Y)
-                        if d < epsilon:
-                            for val,val_prop in zip(thetas, thetas_prop):
-                                val.append(val_prop)
-
-                            break
-
-            end = time.clock()
-            run += 1
-            self.nr_iter.append(nr_iter)
-            self.Thetas.append(thetas) # TODO: change to 2d
-
-            if self.verbosity == 1:
-                print("Run: %2d - Samples: %6d - Threshold: %.2f - Iterations: %10d - Time: %8.2f s" % (run, self.nr_samples, epsilon, self.nr_iter[-1], end - start))
+        if self.verbosity == 1:
+            print("Samples: %6d - Threshold: %.2f - Iterations: %10d - Time: %8.2f s" % (self.nr_samples, self.threshold, self.nr_iter, self.runtime))
 
     def plot_marginals(self, names=[]):
         """func doc"""
-        if len(self.Thetas) == 0:
-            warnings.warn("{}: Method plot_marginals() called before sampling was done".format(type(self).__name__))
-            return
+        if self.Thetas.shape == (0,):
+            raise Warning("Method was called before sampling was done")
 
-        for epsilon in self.thresholds: # TODO: no loop
+        nr_plots = self.Thetas.shape[1] # number of columns
 
-            nr_plots = len(self.Thetas[-1])
-            fig, ax = plt.subplots(1, nr_plots)
+        fig, ax = plt.subplots(1, nr_plots)
 
-            for plot_id, hist in enumerate(self.Thetas[-1]):
-                _ax = ax[plot_id]
-                _ax.hist(hist, edgecolor="k", bins='auto')
-                if names:
-                   _ax.set_xlabel(names[plot_id])
+        for plot_id, hist in enumerate(self.Thetas.T):
+            _ax = ax[plot_id]
+            _ax.hist(hist, edgecolor="k", bins='auto', normed=True)
+            if names and len(names) == nr_plots:
+               _ax.set_xlabel(names[plot_id])
 
-            fig.suptitle("Posterior for all model parameters that with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(epsilon, self.nr_samples))
-            plt.show()
+        fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(self.threshold, self.nr_samples))
+        plt.show()
 
     def __str__(self):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(
@@ -241,23 +289,26 @@ class RejectionSampler(BaseSampler):
 class SMCSampler(object):
 
     def __init__(self, priors=None, simulator=None, observation=None, discrepancy=None, summaries=None, verbosity=1):
-        if prior is None:
-            priors = []
-        if summaries is None:
-            summaries = []
-        self.set_priors(priors)
-        self.set_simulator(simulator)
-        self.set_observation(observation)
-        self.set_discrepancy(discrepancy)
-        self.set_summaries(summaries)
+        if priors is not None:
+            self.set_priors(priors)
+        if simulator is not None:
+            self.set_simulator(simulator)
+        if observation is not None:
+            self.set_observation(observation)
+        if discrepancy is not None:
+            self.set_discrepancy(discrepancy)
+        if summaries is not None:
+            self.set_summaries(summaries)
+
         self.set_verbosity(verbosity)
 
-    def sample():
+    def sample(self, thresholds, nr_particles, distance='euclidean'):
         """Draw samples using Sequential Monte Carlo.
 
         Args:
             thresholds: list of acceptance threshold. len(thresholds defines number of SMC iterations)
             nr_particles: Number of particles used to represent the distribution
+            distance: distance measure to compare summary statistics. (default) euclidean
 
         Returns:
             Nothing

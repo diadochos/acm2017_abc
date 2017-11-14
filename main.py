@@ -43,7 +43,7 @@ print(rej_samp)
 
 threshold = .5
 nr_samples = 1000
-#rej_samp.sample(threshold, nr_samples)
+rej_samp.sample(threshold, nr_samples)
 
 rej_samp.plot_marginals(["mu", "sigma"])
 
@@ -55,9 +55,3 @@ rej_samp.plot_marginals(["mu", "sigma"])
 
 rej_samp.plot_marginals(["mu", "sigma"])
 
-# several thresholds for one run
-thresholds = [3,1,0.5,0.3]
-nr_samples = 500
-rej_samp.sample(thresholds, nr_samples)
-
-rej_samp.plot_marginals(["mu", "sigma"])
