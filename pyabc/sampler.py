@@ -9,7 +9,7 @@ import warnings
 
 
 class BaseSampler(metaclass=abc.ABCMeta):
-    """The summary line for a class docstring should fit on one line.
+    """Abstract base class for all samplers. Defines common setters and properties
 
     If the class has public attributes, they may be documented here
     in an ``Attributes`` section and follow the same formatting as a
@@ -25,89 +25,128 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     """
 
-    # single value parameters
-    simulator = None  # callable function used to simulate data, has to be comparable to observation
-    discrepancy = None  # own discrepancy function which uses the summary functions to compute a distance measure: f: R^nxm x R^nxm x ...-> R^1
-    nr_iter = 0  # list of number of iterations for each sampling process
-    threshold = 0  # list of threshholds used to accept or reject samples
-    nr_samples = 0  # list of accepted samples per iteration
-    verbosity = 0  # level of debug messages
-    runtime = 0 # runtime of abc rejection sampler
-
-    # list value parameters
-    priors = [] # list of callable functions used to sample thetas
-    summaries = []  # list of summary statistics, each a callabe function of type f: R^nxm -> R^1 (accepts numerical data and give working with simulation and observational data
-
     # dict value parameters
-    distances = {
-        'euclidean': lambda x,y: np.linalg.norm(x-y)
+    __distances = {
+        'euclidean':
+            lambda ls1, ls2: np.linalg.norm(np.array([np.linalg.norm(x-y) for x,y in zip(ls1,ls2)]))
     }
 
-    # array value parameters
-    observation = np.empty(0) # observed data, can be any numerical numpy array format R^nxm
-    Thetas = np.empty(0)  # matrix with all accepted samples for each model parameter. One column represents all samples of one parameter
+    # set and get simulator
+    @property
+    def simulator(self):
+        return self._simulator
 
-    def set_simulator(self, sim):
+    @simulator.setter
+    def simulator(self, sim):
         """func doc"""
         if callable(sim):
-            self.simulator = sim
+            self._simulator = sim
         else:
             raise TypeError("Passed argument {} is not a callable function!".format(sim))
 
-    def set_priors(self, priors):
+    # set and get priors
+    @property
+    def priors(self):
+        return self._priors
+
+    @priors.setter
+    def priors(self, priors):
         """func doc"""
         priors = np.atleast_1d(priors)
         if all(callable(p) for p in priors):
-            self.priors = priors
+            self._priors = priors
         else:
             raise TypeError("Passed argument {} is not a callable function or list of functions!".format(priors))
 
-    def set_summaries(self, summaries):
+    # set and get summaries
+    @property
+    def summaries(self):
+        return self._summaries
+
+    @summaries.setter
+    def summaries(self, summaries):
         """func doc"""
         summaries = np.atleast_1d(summaries)
         if all(callable(s) for s in summaries):
-            self.summaries = summaries
+            self._summaries = summaries
         else:
             raise TypeError("Passed argument {} is not a callable function or list of functions!".format(summaries))
 
-    def add_summary(self, summary):
-        """func doc"""
-        if callable(summary):
-            self.summaries = np.hstack((self.summaries, summary))
-        else:
-            raise TypeError("Passed argument {} is not a callable function!".format(summary))
+    # set and get discrepancy
+    @property
+    def discrepancy(self):
+        return self._discrepancy
 
-    def add_prior(self, prior):
+    @discrepancy.setter
+    def discrepancy(self, disc):
         """func doc"""
-        if callable(prior):
-            self.priors = np.hstack((self.priors, prior))
-        else:
-            raise TypeError("Passed argument {} is not a callable function!".format(prior))
-
-    def set_discrepancy(self, disc):
-        """func doc"""
-        if callable(disc):
-            self.discrepancy = disc
+        if callable(disc) or disc is None:
+            self._discrepancy = disc
         else:
             raise TypeError("Passed argument {} is not a callable function!".format(disc))
 
-    def set_observation(self, obs):
+    # set and get observation
+    @property
+    def observation(self):
+        return self._observation
+
+    @observation.setter
+    def observation(self, obs):
         """func doc"""
         try:
             obs = np.atleast_1d(obs)
-            self.observation = obs
+            self._observation = obs
         except (TypeError):
             raise TypeError("Passed argument {} cannot be parsed by numpy.atleast_1d()!".format(obs))
 
-    def set_verbosity(self, lvl):
+    # set and get verbosity
+    @property
+    def verbosity(self):
+        return self._verbosity
+
+    @verbosity.setter
+    def verbosity(self, lvl):
         """set verbosity level of print messages. Possible values are 0, 1, and 2"""
         if isinstance(lvl, int):
             if lvl >= 0 and lvl <= 2:
-                self.verbosity = lvl
+                self._verbosity = lvl
             else:
                 raise ValueError("Passed argument {} has to be one of {0,1,2}.".format(lvl))
         else:
             raise TypeError("Passed argument {} has to be an integer".format(lvl))
+
+    # set and get nr_samples
+    @property
+    def nr_samples(self):
+        return self._nr_samples
+
+    @nr_samples.setter
+    def nr_samples(self, nr_samples):
+        if isinstance(nr_samples, (int,float)):
+            if nr_samples > 0:
+                self._nr_samples = int(nr_samples)
+            else:
+                raise ValueError("Passed argument {} must not be negative".format(nr_samples))
+        else:
+            raise TypeError("Passed argument {} has to be integer.".format(nr_samples))
+
+    # only getter
+    @property
+    def nr_iter(self):
+        return self._nr_iter
+
+    @property
+    def Thetas(self):
+        return self._Thetas
+
+    @property
+    def runtime(self):
+        return self._runtime
+
+    @property
+    def distances(self):
+        return self.__distances
+
 
     @abc.abstractmethod
     def sample(self):
@@ -115,10 +154,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def plot_marginals(self):
-        pass
-
-    @abc.abstractmethod
-    def _are_you_fucking_ready(self):
         pass
 
     @abc.abstractmethod
@@ -142,57 +177,64 @@ class RejectionSampler(BaseSampler):
         attr2 (:obj:`int`, optional): Description of `attr2`.
 
     """
+    # set and get for threshold
+    @property
+    def threshold(self):
+        return self._threshold
 
-    def __init__(self, priors=None, simulator=None, observation=None, discrepancy=None, summaries=None, verbosity=1, seed=None):
+    @threshold.setter
+    def threshold(self, threshold):
+        if isinstance(threshold, (int, float)):
+            if threshold > 0 or np.isclose(threshold, 0):
+                self._threshold = threshold
+            else:
+                raise ValueError("Passed argument {} must not be negative".format(threshold))
+        else:
+            raise TypeError("Passed argument {} has to be and integer or float.".format(threshold))
+
+    def __init__(self, priors, simulator, observation, summaries, discrepancy=None, verbosity=1, seed=None):
         """constructor"""
-        if priors is not None:
-            self.set_priors(priors)
-        if simulator is not None:
-            self.set_simulator(simulator)
-        if observation is not None:
-            self.set_observation(observation)
-        if discrepancy is not None:
-            self.set_discrepancy(discrepancy)
-        if summaries is not None:
-            self.set_summaries(summaries)
+        # must have
+        self.priors = priors
+        self.simulator = simulator
+        self.observation = observation
+        self.summaries = summaries
+
+        # optional
+        self.verbosity = verbosity
+        self.discrepancy = discrepancy
+
         if seed is not None:
             np.random.seed(seed)
 
-        self.set_verbosity(verbosity)
-
-    def _are_you_fucking_ready(self):
-        """check all prerequisites for the sample method to run through"""
-        return self.simulator is not None and len(self.priors) > 0 and len(self.summaries) > 0 and self.observation.shape != (0,)
-
     def _reset(self):
         """reset class properties for a new call of sample method"""
-        self.nr_iter = []
-        self.Thetas = []
+        self._nr_iter = 0
+        self._Thetas = np.empty(0)
 
     def sample_from_priors(self):
-        """draw samples from all priors and return as 1d array"""
-        return self._flatten_function(self.priors)
+        """draw samples from all priors and return as list of outputs
 
-    def _flatten_function(self, list_of_f, args=None):
+        :return list of outputs for each prior
+        """
+        return [p() for p in self.priors]
+
+    def _flatten_output(self, list):
         """return function output as 1d array"""
         ret = np.empty(0)
-        for f in list_of_f:
-            if args is None:
-                ret = np.concatenate((ret, np.atleast_1d(f().flatten())))
-            else:
-                ret = np.concatenate((ret, np.atleast_1d(f(args).flatten())))
+        for e in list:
+            ret = np.concatenate((ret, np.atleast_1d(e.flatten())))
 
         return ret
-
 
     def _run_rejection_sampling(self, distance):
         """the abc rejection sampling algorithm"""
 
         X = self.observation
 
-        stat_vec_x = self._flatten_function(self.summaries, args=X)
+        list_of_stats_x = [s(X) for s in self.summaries]
 
-        thetas = np.zeros((self.nr_samples, self.sample_from_priors().shape[0]))
+        thetas = np.zeros((self.nr_samples, sum(a.shape[0] for a in self.sample_from_priors())))
 
         nr_iter = 0
         start = time.clock()
@@ -202,25 +244,25 @@ class RejectionSampler(BaseSampler):
 
                 thetas_prop = self.sample_from_priors()  # draw as many thetas as there are priors
                 Y = self.simulator(*thetas_prop)  # unpack thetas as single arguments for simulator
-                stat_vec_y = self._flatten_function(self.summaries, args=Y)
+                list_of_stats_y = [s(Y) for s in self.summaries]
 
-                if stat_vec_x.shape != stat_vec_y.shape:
+                if any(s1.shape != s2.shape for s1,s2 in zip(list_of_stats_x, list_of_stats_y)):
                     raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(stat_vec_x.shape, stat_vec_y.shape))
 
                 # either use predefined distance function or user defined discrepancy function
                 if self.discrepancy is None:
-                    d = self.distances[distance](stat_vec_x, stat_vec_y)
+                    d = self.distances[distance](list_of_stats_x, list_of_stats_y)
                 else:
-                    d = self.discrepancy(stat_vec_x, stat_vec_y)
+                    d = self.discrepancy(*list_of_stats_x, *list_of_stats_y)
 
                 if d < self.threshold:
-                    thetas[i, :] = thetas_prop
+                    thetas[i, :] = self._flatten_output(thetas_prop)
                     break
 
-        self.runtime = time.clock() - start
+        self._runtime = time.clock() - start
 
-        self.nr_iter = nr_iter
-        self.Thetas = thetas
+        self._nr_iter = nr_iter
+        self._Thetas = thetas
 
     def sample(self, threshold, nr_samples, distance='euclidean'):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
@@ -234,28 +276,12 @@ class RejectionSampler(BaseSampler):
             Nothing
 
         """
-        # check all prerequisites
-        if isinstance(threshold, (int, float)):
-            if threshold > 0 or np.isclose(threshold, 0):
-                self.threshold = threshold
-            else:
-                raise ValueError("Passed argument {} must not be negative".format(threshold))
-        else:
-            raise TypeError("Passed argument {} has to be and integer or float.".format(threshold))
+        self.threshold = threshold
+        self.nr_samples = nr_samples
 
-        if isinstance(nr_samples, (int,float)):
-            if nr_samples > 0:
-                self.nr_samples = int(nr_samples)
-            else:
-                raise ValueError("Passed argument {} must not be negative".format(nr_samples))
-        else:
-            raise TypeError("Passed argument {} has to be integer.".format(nr_samples))
-
+        # check prerequisites
         if distance not in self.distances.keys():
-            raise ValueError("Passed distance function {} is not available. Possible values are {}.".format(distance, self.distances.keys()))
-
-        if not self._are_you_fucking_ready():
-            raise Warning("At least one necessary function or the observations are not yet set (prior, simulatior, summaries or observation).")
+            raise ValueError("Passed distance function {} is not available. Possible values are {}.".format(distance, self.__distances.keys()))
 
         print("Rejection sampler started with threshold: {} and number of samples: {}".format(self.threshold, self.nr_samples))
 
@@ -292,20 +318,33 @@ class RejectionSampler(BaseSampler):
 
 """class doc"""
 class SMCSampler(object):
+    # set and get for threshold
+    @property
+    def thresholds(self):
+        return self._thresholds
 
-    def __init__(self, priors=None, simulator=None, observation=None, discrepancy=None, summaries=None, verbosity=1):
-        if priors is not None:
-            self.set_priors(priors)
-        if simulator is not None:
-            self.set_simulator(simulator)
-        if observation is not None:
-            self.set_observation(observation)
-        if discrepancy is not None:
-            self.set_discrepancy(discrepancy)
-        if summaries is not None:
-            self.set_summaries(summaries)
+    @thresholds.setter
+    def thresholds(self, thresholds):
+        thresholds = np.atleast_1d(thresholds)
+        if all(isinstance(t, (int, float)) and (t > 0 or np.isclose(t, 0))  for t in thresholds):
+            self.thresholds = thresholds
+        else:
+            raise ValueError("Passed argument {} must not be a list of integers or float and non-negative".format(thresholds))
 
-        self.set_verbosity(verbosity)
+    def __init__(self, priors, simulator, observation, summaries, discrepancy=None, verbosity=1, seed=None):
+
+        # must have
+        self.priors = priors
+        self.simulator = simulator
+        self.observation = observation
+        self.summaries = summaries
+
+        # optional
+        self.verbosity = verbosity
+        self.discrepancy = discrepancy
+
+        if seed is not None:
+            np.random.seed(seed)
 
     def sample(self, thresholds, nr_particles, distance='euclidean'):
         """Draw samples using Sequential Monte Carlo.
@@ -329,7 +368,7 @@ class SMCSampler(object):
 
 
 
-    def plot_marginals():
+    def plot_marginals(self):
         pass
 
 
