@@ -299,11 +299,16 @@ class RejectionSampler(BaseSampler):
             raise Warning("Method was called before sampling was done")
 
         nr_plots = self.Thetas.shape[1] # number of columns
+        print(nr_plots)
 
         fig, ax = plt.subplots(1, nr_plots)
 
         for plot_id, hist in enumerate(self.Thetas.T):
-            _ax = ax[plot_id]
+            if nr_plots == 1:
+                _ax = ax 
+            else : 
+                _ax = ax[plot_id]
+                
             _ax.hist(hist, edgecolor="k", bins='auto', normed=True)
             if names and len(names) == nr_plots:
                _ax.set_xlabel(names[plot_id])
