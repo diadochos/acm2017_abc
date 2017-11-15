@@ -223,7 +223,7 @@ class RejectionSampler(BaseSampler):
         """return function output as 1d array"""
         ret = np.empty(0)
         for e in list:
-            ret = np.concatenate((ret, np.atleast_1d(e.flatten())))
+            ret = np.concatenate((ret, np.atleast_1d(np.atleast_1d(e).flatten())))
 
         return ret
 
@@ -234,7 +234,7 @@ class RejectionSampler(BaseSampler):
 
         list_of_stats_x = [s(X) for s in self.summaries]
 
-        thetas = np.zeros((self.nr_samples, sum(a.shape[0] for a in self.sample_from_priors())))
+        thetas = np.zeros((self.nr_samples, sum(np.atleast_1d(a).shape[0] for a in self.sample_from_priors())))
 
         nr_iter = 0
         start = time.clock()
@@ -247,7 +247,7 @@ class RejectionSampler(BaseSampler):
                 list_of_stats_y = [s(Y) for s in self.summaries]
 
                 if any(s1.shape != s2.shape for s1,s2 in zip(list_of_stats_x, list_of_stats_y)):
-                    raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(stat_vec_x.shape, stat_vec_y.shape))
+                    raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(list_of_stats_x, list_of_stats_y))
 
                 # either use predefined distance function or user defined discrepancy function
                 if self.discrepancy is None:
