@@ -257,7 +257,6 @@ class RejectionSampler(BaseSampler):
                 if any(s1.shape != s2.shape for s1,s2 in zip(list_of_stats_x, list_of_stats_y)):
                     raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(list_of_stats_x, list_of_stats_y))
 
-                print(list_of_stats_x)
                 # either use predefined distance function or user defined discrepancy function
                 d = self.distance(list_of_stats_x, list_of_stats_y)
 
