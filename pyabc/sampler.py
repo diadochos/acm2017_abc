@@ -74,14 +74,16 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     # set and get discrepancy
     @property
-    def discrepancy(self):
-        return self._discrepancy
+    def distance(self):
+        return self._distance
 
-    @discrepancy.setter
-    def discrepancy(self, disc):
+    @distance.setter
+    def distance(self, d):
         """func doc"""
-        if callable(disc) or disc is None:
-            self._discrepancy = disc
+        if callable(d):
+            self._distance = d
+        elif isinstance(d, str):
+            self._distance = self.__distances[d]
         else:
             raise TypeError("Passed argument {} is not a callable function!".format(disc))
 
@@ -192,7 +194,7 @@ class RejectionSampler(BaseSampler):
         else:
             raise TypeError("Passed argument {} has to be and integer or float.".format(threshold))
 
-    def __init__(self, priors, simulator, observation, summaries, discrepancy=None, verbosity=1, seed=None):
+    def __init__(self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None):
         """constructor"""
         # must have
         self.priors = priors
@@ -202,7 +204,7 @@ class RejectionSampler(BaseSampler):
 
         # optional
         self.verbosity = verbosity
-        self.discrepancy = discrepancy
+        self.distance = distance
 
         if seed is not None:
             np.random.seed(seed)
@@ -233,7 +235,7 @@ class RejectionSampler(BaseSampler):
     def _flatten_output(self, x):
         return np.hstack(np.atleast_1d(e).flatten() for e in x)
 
-    def _run_rejection_sampling(self, distance):
+    def _run_rejection_sampling(self):
         """the abc rejection sampling algorithm"""
 
         X = self.observation
@@ -255,11 +257,9 @@ class RejectionSampler(BaseSampler):
                 if any(s1.shape != s2.shape for s1,s2 in zip(list_of_stats_x, list_of_stats_y)):
                     raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(list_of_stats_x, list_of_stats_y))
 
+                print(list_of_stats_x)
                 # either use predefined distance function or user defined discrepancy function
-                if self.discrepancy is None:
-                    d = self.distances[distance](list_of_stats_x, list_of_stats_y)
-                else:
-                    d = self.discrepancy(*[s(X) for s in self.summaries], *[s(Y) for s in self.summaries])
+                d = self.distance(list_of_stats_x, list_of_stats_y)
 
                 if d < self.threshold:
                     thetas[i, :] = self._flatten_output(thetas_prop)
@@ -270,7 +270,7 @@ class RejectionSampler(BaseSampler):
         self._nr_iter = nr_iter
         self._Thetas = thetas
 
-    def sample(self, threshold, nr_samples, distance='euclidean'):
+    def sample(self, threshold, nr_samples):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
 
         Args:
@@ -285,16 +285,12 @@ class RejectionSampler(BaseSampler):
         self.threshold = threshold
         self.nr_samples = nr_samples
 
-        # check prerequisites
-        if distance not in self.distances.keys():
-            raise ValueError("Passed distance function {} is not available. Possible values are {}.".format(distance, self.__distances.keys()))
-
         print("Rejection sampler started with threshold: {} and number of samples: {}".format(self.threshold, self.nr_samples))
 
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
-        self._run_rejection_sampling(distance)
+        self._run_rejection_sampling()
 
         if self.verbosity == 1:
             print("Samples: %6d - Threshold: %.2f - Iterations: %10d - Time: %8.2f s" % (self.nr_samples, self.threshold, self.nr_iter, self.runtime))
@@ -310,8 +306,8 @@ class RejectionSampler(BaseSampler):
 
         for plot_id, hist in enumerate(self.Thetas.T):
             if nr_plots == 1:
-                _ax = ax 
-            else : 
+                _ax = ax
+            else :
                 _ax = ax[plot_id]
 
             _ax.hist(hist, edgecolor="k", bins='auto', normed=True)
