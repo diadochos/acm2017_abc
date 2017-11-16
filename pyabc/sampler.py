@@ -82,10 +82,13 @@ class BaseSampler(metaclass=abc.ABCMeta):
         """func doc"""
         if callable(d):
             self._distance = d
-        elif isinstance(d, str):
-            self._distance = self.__distances[d]
+        elif isinstance(d, str) :
+            if d in self.__distances.keys():
+                self._distance = self.__distances[d]
+            else:
+                raise KeyError("Passed argument {} is not a valid distance function. Choose from {}.".format(d, self.__distances.keys()))
         else:
-            raise TypeError("Passed argument {} is not a callable function!".format(disc))
+            raise TypeError("Passed argument {} is neither a callable function nor a name of predefined distance functions!".format(d))
 
     # set and get observation
     @property
