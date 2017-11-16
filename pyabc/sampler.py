@@ -230,9 +230,6 @@ class RejectionSampler(BaseSampler):
 
         return ret
 
-    def _flatten_output(self, x):
-        return np.hstack(np.atleast_1d(e).flatten() for e in x)
-
     def _run_rejection_sampling(self, distance):
         """the abc rejection sampling algorithm"""
 
@@ -262,7 +259,7 @@ class RejectionSampler(BaseSampler):
                     d = self.discrepancy(*[s(X) for s in self.summaries], *[s(Y) for s in self.summaries])
 
                 if d < self.threshold:
-                    thetas[i, :] = self._flatten_output(thetas_prop)
+                    thetas[i, :] = np.hstack(np.atleast_1d(p).flatten() for p in thetas_prop)
                     break
 
         self._runtime = time.clock() - start
