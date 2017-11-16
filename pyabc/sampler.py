@@ -28,7 +28,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
     # dict value parameters
     __distances = {
         'euclidean':
-            lambda ls1, ls2: np.linalg.norm(np.array([np.linalg.norm(x-y) for x,y in zip(ls1,ls2)]))
+            lambda x,y: np.linalg.norm(x-y)
     }
 
     # set and get simulator
@@ -219,11 +219,14 @@ class RejectionSampler(BaseSampler):
         """
         return [p() for p in self.priors]
 
-    def _flatten_output(self, list):
+    def _flatten_function(self, list_of_f, args=None):
         """return function output as 1d array"""
         ret = np.empty(0)
-        for e in list:
-            ret = np.concatenate((ret, np.atleast_1d(np.atleast_1d(e).flatten())))
+        for f in list_of_f:
+            if args is None:
+                ret = np.concatenate((ret, np.atleast_1d(f()).flatten()))
+            else:
+                ret = np.concatenate((ret, np.atleast_1d(f(args)).flatten()))
 
         return ret
 
@@ -232,7 +235,7 @@ class RejectionSampler(BaseSampler):
 
         X = self.observation
 
-        list_of_stats_x = [s(X) for s in self.summaries]
+        list_of_stats_x = self._flatten_function(self.summaries, X)
 
         thetas = np.zeros((self.nr_samples, sum(np.atleast_1d(a).shape[0] for a in self.sample_from_priors())))
 
@@ -244,7 +247,7 @@ class RejectionSampler(BaseSampler):
 
                 thetas_prop = self.sample_from_priors()  # draw as many thetas as there are priors
                 Y = self.simulator(*thetas_prop)  # unpack thetas as single arguments for simulator
-                list_of_stats_y = [s(Y) for s in self.summaries]
+                list_of_stats_y = self._flatten_function(self.summaries, Y)
 
                 if any(s1.shape != s2.shape for s1,s2 in zip(list_of_stats_x, list_of_stats_y)):
                     raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(list_of_stats_x, list_of_stats_y))
@@ -253,10 +256,10 @@ class RejectionSampler(BaseSampler):
                 if self.discrepancy is None:
                     d = self.distances[distance](list_of_stats_x, list_of_stats_y)
                 else:
-                    d = self.discrepancy(*list_of_stats_x, *list_of_stats_y)
+                    d = self.discrepancy(*[s(X) for s in self.summaries], *[s(Y) for s in self.summaries])
 
                 if d < self.threshold:
-                    thetas[i, :] = self._flatten_output(thetas_prop)
+                    thetas[i, :] = np.hstack(np.atleast_1d(p).flatten() for p in thetas_prop)
                     break
 
         self._runtime = time.clock() - start
