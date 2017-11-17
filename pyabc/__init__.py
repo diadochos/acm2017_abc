@@ -1,2 +1,2 @@
-from .sampler import RejectionSampler
-from .sampler import SMCSampler
+from .rejection_sampler import RejectionSampler
+from .smc_sampler import SMCSampler
