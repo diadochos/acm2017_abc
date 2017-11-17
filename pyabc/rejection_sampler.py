@@ -132,7 +132,8 @@ class RejectionSampler(BaseSampler):
             Y_batch = (self.simulator(*thetas) for thetas in thetas_batch)
             summaries_batch = (self._flatten_function(self.summaries, Y) for Y in Y_batch)
             d_batch = (self.distance(list_of_stats_x, list_of_stats_y) for list_of_stats_y in summaries_batch)
-            accepted_thetas.extend((theta for theta, d in zip(thetas_batch, d_batch) if d < self.threshold))
+
+            accepted_thetas.extend((thetas_batch for theta in thetas_batch if next(d_batch) < self.threshold))
 
 
         accepted_thetas = accepted_thetas[:nr_samples]
