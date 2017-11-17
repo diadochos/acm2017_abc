@@ -12,4 +12,7 @@ __pycache__/
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
 
+# miscellaneous unneeded files
 *.Rhistory
+*.DS_Store
+
