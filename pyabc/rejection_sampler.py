@@ -144,7 +144,7 @@ class RejectionSampler(BaseSampler):
         self._Thetas = thetas
 
 
-    def sample(self, threshold, nr_samples, batch_size=100):
+    def sample(self, threshold, nr_samples, batch_size=100, old_version=False):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
 
         Args:
@@ -163,8 +163,10 @@ class RejectionSampler(BaseSampler):
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
-        #self._run_rejection_sampling(nr_samples)
-        self._run_rejection_sampling_opt(nr_samples, batch_size)
+        if old_version:
+            self._run_rejection_sampling(nr_samples)
+        else:
+            self._run_rejection_sampling_opt(nr_samples, batch_size)
 
         if self.verbosity == 1:
             print("Samples: %6d - Threshold: %.2f - Acceptance rate: %10d %% - Time: %8.2f s" % (nr_samples, self.threshold, self.acceptance_rate*100, self.runtime))
