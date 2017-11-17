@@ -132,8 +132,8 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     # only getter
     @property
-    def nr_iter(self):
-        return self._nr_iter
+    def acceptance_rate(self):
+        return self._acceptance_rate
 
     @property
     def Thetas(self):

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
+
 class RejectionSampler(BaseSampler):
     """The summary line for a class docstring should fit on one line.
 
@@ -51,7 +52,7 @@ class RejectionSampler(BaseSampler):
 
     def _reset(self):
         """reset class properties for a new call of sample method"""
-        self._nr_iter = 0
+        self._acceptance_rate = 0
         self._Thetas = np.empty(0)
 
     def sample_from_priors(self):
@@ -76,7 +77,7 @@ class RejectionSampler(BaseSampler):
         return np.hstack(np.atleast_1d(e).flatten() for e in x)
 
     def _run_rejection_sampling(self, nr_samples):
-        """the abc rejection sampling algorithm"""
+        """the abc rejection sampling algorithm with batches"""
 
         X = self.observation
 
@@ -104,14 +105,46 @@ class RejectionSampler(BaseSampler):
                     thetas[i, :] = self._flatten_output(thetas_prop)
                     break
 
+
         self._runtime = time.clock() - start
 
-        self._nr_iter = nr_iter
+        self._acceptance_rate = nr_samples / nr_iter
         self._Thetas = thetas
         return self.Thetas
 
+    def _run_rejection_sampling_opt(self, nr_samples, batch_size=100):
+        """the abc rejection sampling algorithm with batches"""
 
-    def sample(self, threshold, nr_samples):
+        X = self.observation
+
+        list_of_stats_x = self._flatten_function(self.summaries, X)
+
+        accepted_thetas = []
+
+        start = time.clock()
+
+        nr_batches = 0
+
+        while len(accepted_thetas) < nr_samples:
+            nr_batches += 1
+            # draw batch_size parameters from priors
+            thetas_batch = [self.sample_from_priors() for i in range(batch_size)]
+            Y_batch = (self.simulator(*thetas) for thetas in thetas_batch)
+            summaries_batch = (self._flatten_function(self.summaries, Y) for Y in Y_batch)
+            d_batch = (self.distance(list_of_stats_x, list_of_stats_y) for list_of_stats_y in summaries_batch)
+            accepted_thetas += [theta for theta, d in zip(thetas_batch, d_batch) if d < self.threshold]
+
+
+        accepted_thetas = accepted_thetas[:nr_samples]
+        thetas = np.array(accepted_thetas)
+
+        self._runtime = time.clock() - start
+
+        self._acceptance_rate = nr_samples / (nr_batches * batch_size)
+        self._Thetas = thetas
+
+
+    def sample(self, threshold, nr_samples, batch_size=100):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
 
         Args:
@@ -130,10 +163,11 @@ class RejectionSampler(BaseSampler):
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
-        self._run_rejection_sampling(nr_samples)
+        #self._run_rejection_sampling(nr_samples)
+        self._run_rejection_sampling_opt(nr_samples, batch_size)
 
         if self.verbosity == 1:
-            print("Samples: %6d - Threshold: %.2f - Iterations: %10d - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.runtime))
+            print("Samples: %6d - Threshold: %.2f - Acceptance rate: %10d %% - Time: %8.2f s" % (nr_samples, self.threshold, self.acceptance_rate*100, self.runtime))
 
     def plot_marginals(self, names=[]):
         """func doc"""
@@ -162,11 +196,3 @@ class RejectionSampler(BaseSampler):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(
             type(self).__name__, len(self.priors), self.simulator, len(self.summaries), self.observation.shape, self.discrepancy, self.verbosity
         )
-
-
-
-if __name__ == '__main__':
-    print('Subclass:', issubclass(RejectionSampler,
-                                  BaseSampler))
-    print('Instance:', isinstance(RejectionSampler(),
-                                  BaseSampler))
