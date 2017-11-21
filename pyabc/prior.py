@@ -42,8 +42,8 @@ class UniformPrior(Prior):
         """constructor"""
         # must have
         self._distribution = ss.uniform(a,b)
-        self._a = a 
-        self._b = b 
+        self._a = a
+        self._b = b
 
     def sample(self):
         return np.random.uniform(self._a,self._b)
@@ -60,8 +60,8 @@ class GaussianPrior(Prior):
         """constructor"""
         # must have
         self._distribution = ss.norm(mu,sigma)
-        self._mu = mu 
-        self._sigma = sigma 
+        self._mu = mu
+        self._sigma = sigma
 
     def sample(self):
         return np.random.norm(self._mu,self._sigma)
@@ -71,9 +71,3 @@ class GaussianPrior(Prior):
 
     def plot_marginal(self):
         pass
-
-
-
-
-
-
