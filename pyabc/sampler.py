@@ -2,6 +2,7 @@
 
 import abc
 import numpy as np
+from .prior import Prior
 
 class BaseSampler(metaclass=abc.ABCMeta):
     """Abstract base class for all samplers. Defines common setters and properties
@@ -48,10 +49,11 @@ class BaseSampler(metaclass=abc.ABCMeta):
     def priors(self, priors):
         """func doc"""
         priors = np.atleast_1d(priors)
-        if all(callable(p) for p in priors):
-            self._priors = priors
+        if all(issubclass(type(p),Prior) for p in priors):
+             self._priors = priors
         else:
-            raise TypeError("Passed argument {} is not a callable function or list of functions!".format(priors))
+            print(all(issubclass(p,Prior) for p in priors))
+            raise TypeError("Passed argument {} is not a subclass of prior!".format(priors))
 
     # set and get summaries
     @property

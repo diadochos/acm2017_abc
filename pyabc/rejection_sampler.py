@@ -59,7 +59,7 @@ class RejectionSampler(BaseSampler):
 
         :return list of outputs for each prior
         """
-        return [p() for p in self.priors]
+        return [p.sample() for p in self.priors]
 
     def _flatten_function(self, list_of_f, args=None):
         """return function output as 1d array"""
