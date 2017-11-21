@@ -1,4 +1,5 @@
 from .sampler import BaseSampler
+from .utils import flatten_function
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -60,18 +61,8 @@ class RejectionSampler(BaseSampler):
 
         :return list of outputs for each prior
         """
-        return [p() for p in self.priors]
+        return [p.sample() for p in self.priors]
 
-    def _flatten_function(self, list_of_f, args=None):
-        """return function output as 1d array"""
-        ret = np.empty(0)
-        for f in list_of_f:
-            if args is None:
-                ret = np.concatenate((ret, np.atleast_1d(f()).flatten()))
-            else:
-                ret = np.concatenate((ret, np.atleast_1d(f(args)).flatten()))
-
-        return ret
 
     def _flatten_output(self, x):
         return np.hstack(np.atleast_1d(e).flatten() for e in x)
@@ -81,7 +72,7 @@ class RejectionSampler(BaseSampler):
 
         X = self.observation
 
-        list_of_stats_x = self._flatten_function(self.summaries, X)
+        list_of_stats_x = flatten_function(self.summaries, X)
 
         thetas = np.zeros((nr_samples, sum(np.atleast_1d(a).shape[0] for a in self.sample_from_priors())))
 
@@ -93,7 +84,7 @@ class RejectionSampler(BaseSampler):
 
                 thetas_prop = self.sample_from_priors()  # draw as many thetas as there are priors
                 Y = self.simulator(*thetas_prop)  # unpack thetas as single arguments for simulator
-                list_of_stats_y = self._flatten_function(self.summaries, Y)
+                list_of_stats_y = flatten_function(self.summaries, Y)
 
                 if any(s1.shape != s2.shape for s1,s2 in zip(list_of_stats_x, list_of_stats_y)):
                     raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(list_of_stats_x, list_of_stats_y))
