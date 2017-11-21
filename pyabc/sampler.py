@@ -24,7 +24,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
     # dict value parameters
     __distances = {
         'euclidean':
-            lambda x,y: np.linalg.norm(x-y)
+            lambda x,y: np.linalg.norm(x-y, axis=1)
     }
 
     # set and get simulator
@@ -134,8 +134,8 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     # only getter
     @property
-    def acceptance_rate(self):
-        return self._acceptance_rate
+    def nr_iter(self):
+        return self._nr_iter
 
     @property
     def Thetas(self):

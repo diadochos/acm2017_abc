@@ -53,62 +53,28 @@ class RejectionSampler(BaseSampler):
 
     def _reset(self):
         """reset class properties for a new call of sample method"""
-        self._acceptance_rate = 0
+        self._nr_iter = 0
         self._Thetas = np.empty(0)
 
-    def sample_from_priors(self):
+    def sample_from_priors(self, size):
         """draw samples from all priors and return as list of outputs
 
         :return list of outputs for each prior
         """
-        return [p.sample() for p in self.priors]
+        return np.vstack([p.sample(size) for p in self.priors]).T
 
 
     def _flatten_output(self, x):
         return np.hstack(np.atleast_1d(e).flatten() for e in x)
 
-    def _run_rejection_sampling(self, nr_samples):
+    def _run_rejection_sampling(self, nr_samples, batch_size):
         """the abc rejection sampling algorithm with batches"""
 
         X = self.observation
 
-        list_of_stats_x = flatten_function(self.summaries, X)
+        stats_x = flatten_function(self.summaries, X)
 
-        thetas = np.zeros((nr_samples, sum(np.atleast_1d(a).shape[0] for a in self.sample_from_priors())))
-
-        nr_iter = 0
-        start = time.clock()
-        for i in range(nr_samples):
-            while True:
-                nr_iter += 1
-
-                thetas_prop = self.sample_from_priors()  # draw as many thetas as there are priors
-                Y = self.simulator(*thetas_prop)  # unpack thetas as single arguments for simulator
-                list_of_stats_y = flatten_function(self.summaries, Y)
-
-                if any(s1.shape != s2.shape for s1,s2 in zip(list_of_stats_x, list_of_stats_y)):
-                    raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(list_of_stats_x, list_of_stats_y))
-
-                # either use predefined distance function or user defined discrepancy function
-                d = self.distance(list_of_stats_x, list_of_stats_y)
-
-                if d < self.threshold:
-                    thetas[i, :] = self._flatten_output(thetas_prop)
-                    break
-
-
-        self._runtime = time.clock() - start
-
-        self._acceptance_rate = nr_samples / nr_iter
-        self._Thetas = thetas
-        return self.Thetas
-
-    def _run_rejection_sampling_opt(self, nr_samples, batch_size=100):
-        """the abc rejection sampling algorithm with batches"""
-
-        X = self.observation
-
-        list_of_stats_x = self._flatten_function(self.summaries, X)
+        summaries = lambda thetas: flatten_function(self.summaries, self.simulator(*thetas))
 
         accepted_thetas = []
 
@@ -119,24 +85,23 @@ class RejectionSampler(BaseSampler):
         while len(accepted_thetas) < nr_samples:
             nr_batches += 1
             # draw batch_size parameters from priors
-            thetas_batch = [self.sample_from_priors() for i in range(batch_size)]
-            Y_batch = (self.simulator(*thetas) for thetas in thetas_batch)
-            summaries_batch = (self._flatten_function(self.summaries, Y) for Y in Y_batch)
-            d_batch = (self.distance(list_of_stats_x, list_of_stats_y) for list_of_stats_y in summaries_batch)
+            thetas_batch = self.sample_from_priors(batch_size)
+            summaries_batch = np.apply_along_axis(summaries, axis=1, arr=thetas_batch)
+            d_batch = self.distance(stats_x, summaries_batch)
 
-            accepted_thetas.extend((thetas_batch for theta in thetas_batch if next(d_batch) < self.threshold))
-
+            accepted_thetas.extend(thetas_batch[d_batch < self.threshold])
 
         accepted_thetas = accepted_thetas[:nr_samples]
         thetas = np.array(accepted_thetas)
 
         self._runtime = time.clock() - start
 
-        self._acceptance_rate = nr_samples / (nr_batches * batch_size)
+        self._nr_iter = (nr_batches * batch_size)
         self._Thetas = thetas
+        return thetas
 
 
-    def sample(self, threshold, nr_samples, batch_size=100, old_version=False):
+    def sample(self, threshold, nr_samples, batch_size=1000):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
 
         Args:
@@ -155,13 +120,10 @@ class RejectionSampler(BaseSampler):
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
-        if old_version:
-            self._run_rejection_sampling(nr_samples)
-        else:
-            self._run_rejection_sampling_opt(nr_samples, batch_size)
+        self._run_rejection_sampling(nr_samples, batch_size)
 
         if self.verbosity == 1:
-            print("Samples: %6d - Threshold: %.2f - Acceptance rate: %10d %% - Time: %8.2f s" % (nr_samples, self.threshold, self.acceptance_rate*100, self.runtime))
+            print("Samples: %6d - Threshold: %.2f - Number of iterations: %10d - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.runtime))
 
     def plot_marginals(self, names=[]):
         """func doc"""
