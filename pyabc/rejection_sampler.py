@@ -64,8 +64,6 @@ class RejectionSampler(BaseSampler):
         return np.vstack([p.sample(size) for p in self.priors]).T
 
 
-    def _flatten_output(self, x):
-        return np.hstack(np.atleast_1d(e).flatten() for e in x)
 
     def _run_rejection_sampling(self, nr_samples, batch_size):
         """the abc rejection sampling algorithm with batches"""
@@ -87,7 +85,7 @@ class RejectionSampler(BaseSampler):
             # draw batch_size parameters from priors
             thetas_batch = self.sample_from_priors(batch_size)
             summaries_batch = np.apply_along_axis(summaries, axis=1, arr=thetas_batch)
-            d_batch = self.distance(stats_x, summaries_batch)
+            d_batch = np.apply_along_axis(lambda stats_y: self.distance(stats_x, stats_y), axis=1, arr=summaries_batch)
 
             accepted_thetas.extend(thetas_batch[d_batch < self.threshold])
 

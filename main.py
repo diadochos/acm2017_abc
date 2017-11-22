@@ -23,4 +23,4 @@ def var(x):
 
 rej_samp = pyabc.RejectionSampler(priors=[p1, p2], simulator=simulator, summaries=[mean, var], observation=y0)
 
-rej_samp.sample(0.5, 100)
+rej_samp.sample(0.5, 100, batch_size=1000)

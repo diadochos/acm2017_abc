@@ -25,7 +25,7 @@ NUMPY_ALIASES = {
 
 VALID_NUMPY_SAMPLERS = [
     'beta', 'dirichlet', 'f', 'laplace', 'multinomial', 'multivariate_normal',
-    'exponential', 'normal', 'uniform', 'binomial', 'poisson'
+    'gamma', 'exponential', 'normal', 'uniform', 'binomial', 'poisson'
 ]
 
 
@@ -52,6 +52,8 @@ def numpy_sampler_from_str(name, *args):
             return lambda size: np_function(args[1], size=size) + args[0]
         else:
             return partial(np_function, *args)
+    else:
+        raise ValueError('{} is not a valid numpy.random sampler'.format(name))
 
 
 def flatten_function(list_of_f, args=None):
