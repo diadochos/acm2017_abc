@@ -1,5 +1,7 @@
 from .utils import scipy_from_str, numpy_sampler_from_str
 from functools import partial
+import scipy.stats as ss
+
 
 class Prior():
     """Abstract base class for all priors. Defines common setters and properties
@@ -25,19 +27,29 @@ class Prior():
         try:
             # set the distribution to the corresponding scipy object
             self.distribution = scipy_from_str(name)(*args)
+
             try:
                 # try to set the sampler to the numpy function if it exists
                 # because numpy samplers are faster than scipy
-                self._sample = numpy_sampler_from_str(name, *args)
+                sampler = numpy_sampler_from_str(name, *args)
+
+            # if that fails, fall back to the scipy function
             except:
-                # if that fails, fall back to the scipy function
-                self._sample = self.distribution.rvs
+                sampler = self.distribution.rvs
+
+            if isinstance(self.distribution, ss._multivariate.multi_rv_frozen):
+                self._sample = lambda s: sampler(size=s).T
+            else:
+                self._sample = sampler
+
         except TypeError:
             # if arguments do not fit the scipy distribution
             raise ValueError('The provided arguments have to be valid for the specified scipy distribution.')
         except AttributeError:
             # if the scipy distribution does not exist
             raise ValueError('"{}" is not a valid scipy distribution.'.format(name))
+
+
 
 
 
