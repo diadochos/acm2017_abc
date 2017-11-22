@@ -28,7 +28,7 @@ class Prior():
             try:
                 # try to set the sampler to the numpy function if it exists
                 # because numpy samplers are faster than scipy
-                self._sample = partial(numpy_sampler_from_str(name), *args)
+                self._sample = numpy_sampler_from_str(name, *args)
             except:
                 # if that fails, fall back to the scipy function
                 self._sample = self.distribution.rvs
