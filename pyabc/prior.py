@@ -1,4 +1,5 @@
-from .utils import scipy_from_str
+from .utils import scipy_from_str, numpy_sampler_from_str
+from functools import partial
 
 class Prior():
     """Abstract base class for all priors. Defines common setters and properties
@@ -18,19 +19,30 @@ class Prior():
     """
 
     def __init__(self, name, *args):
-        if isinstance(name, str):
-            try:
-                self.distribution = scipy_from_str(name)(*args)
-            except TypeError:
-                raise ValueError('The provided arguments have to be valid for the specified scipy distribution.')
-            except AttributeError:
-                raise ValueError('"{}" is not a valid scipy distribution.'.format(name))
-        else:
+        if not isinstance(name, str):
             raise TypeError("Passed argument {} has to be str.".format(name))
+
+        try:
+            # set the distribution to the corresponding scipy object
+            self.distribution = scipy_from_str(name)(*args)
+            try:
+                # try to set the sampler to the numpy function if it exists
+                # because numpy samplers are faster than scipy
+                self._sample = partial(numpy_sampler_from_str(name), *args)
+            except:
+                # if that fails, fall back to the scipy function
+                self._sample = self.distribution.rvs
+        except TypeError:
+            # if arguments do not fit the scipy distribution
+            raise ValueError('The provided arguments have to be valid for the specified scipy distribution.')
+        except AttributeError:
+            # if the scipy distribution does not exist
+            raise ValueError('"{}" is not a valid scipy distribution.'.format(name))
+
 
 
     def sample(self, size=None):
-        return self.distribution.rvs(size)
+        return self._sample(size)
 
     def pdf(self, theta):
         return self.distribution.pdf(theta)
