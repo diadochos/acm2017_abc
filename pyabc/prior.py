@@ -1,8 +1,6 @@
-import abc
-import numpy as np
-import scipy.stats as ss
+from .utils import scipy_from_str
 
-class Prior(metaclass=abc.ABCMeta):
+class Prior():
     """Abstract base class for all priors. Defines common setters and properties
 
     If the class has public attributes, they may be documented here
@@ -19,61 +17,24 @@ class Prior(metaclass=abc.ABCMeta):
 
     """
 
-    # set and get priors
-    @property
-    def distribution(self):
-        return self._distribution
-
-    @abc.abstractmethod
-    def sample(self):
-        pass
-
-    @abc.abstractmethod
-    def pdf(self,theta):
-        pass
-
-    @abc.abstractmethod
-    def plot_marginal(self):
-        pass
+    def __init__(self, name, *args):
+        if isinstance(name, str):
+            try:
+                self.distribution = scipy_from_str(name)(*args)
+            except TypeError:
+                raise ValueError('The provided arguments have to be valid for the specified scipy distribution.')
+            except AttributeError:
+                raise ValueError('"{}" is not a valid scipy distribution.'.format(name))
+        else:
+            raise TypeError("Passed argument {} has to be str.".format(name))
 
 
-class UniformPrior(Prior):
-    def __init__(self,a,b):
-        """constructor"""
-        # must have
-        self._distribution = ss.uniform(a,b)
-        self._a = a 
-        self._b = b 
+    def sample(self, size=None):
+        return self.distribution.rvs(size)
 
-    def sample(self):
-        return np.random.uniform(self._a,self._b)
+    def pdf(self, theta):
+        return self.distribution.pdf(theta)
 
-    def pdf(self,theta):
-        return self._distribution.pdf(theta)
-
-    def plot_marginal(self):
-        pass
-
-
-class GaussianPrior(Prior):
-    def __init__(self,mu,sigma):
-        """constructor"""
-        # must have
-        self._distribution = ss.norm(mu,sigma)
-        self._mu = mu 
-        self._sigma = sigma 
-
-    def sample(self):
-        return np.random.norm(self._mu,self._sigma)
-
-    def pdf(self,theta):
-        return self._distribution.pdf(theta)
-
-    def plot_marginal(self):
-        pass
-
-
-
-
-
-
+    # @abc.abstractmethod
+    # def plot_marginal(self):
+    #     pass
