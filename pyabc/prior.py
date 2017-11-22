@@ -4,15 +4,11 @@ import scipy.stats as ss
 
 
 class Prior():
-    """Abstract base class for all priors. Defines common setters and properties
+    """Abstract base class for all prior distributions.
+    Basically a wrapper for scipy distributions, which uses the corresponding
+    numpy sampling function for performance reasons.
 
-    If the class has public attributes, they may be documented here
-    in an ``Attributes`` section and follow the same formatting as a
-    function's ``Args`` section. Alternatively, attributes may be documented
-    inline with the attribute's declaration (see __init__ method below).
-
-    Properties created with the ``@property`` decorator should be documented
-    in the property's getter method.
+    Allows sampling from the prior and evaluating the pdf.
 
     Attributes:
         attr1 (str): Description of `attr1`.
@@ -21,6 +17,16 @@ class Prior():
     """
 
     def __init__(self, name, *args):
+        """Initialize the scipy and numpy objects.
+
+        Args:
+            name (str): name of the distribution. Can be one of the distributions
+                from the scipy.stats module
+            *args: the distribution's parameters. See scipy documentation
+        """
+
+        # we only accept strings
+        # maybe implement custom functions in the future
         if not isinstance(name, str):
             raise TypeError("Passed argument {} has to be str.".format(name))
 
@@ -37,6 +43,8 @@ class Prior():
             except:
                 sampler = self.distribution.rvs
 
+            # if the prior is multivariate, the samples need to be returned
+            # in a transposed format for the rejection sampler to work
             if isinstance(self.distribution, ss._multivariate.multi_rv_frozen):
                 self._sample = lambda s: sampler(size=s).T
             else:

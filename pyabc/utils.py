@@ -2,6 +2,7 @@ import numpy as np
 import scipy.stats as ss
 from functools import partial
 
+# some aliases for convenient call of scipy functions
 SCIPY_ALIASES = {
     'normal': 'norm',
     'gaussian': 'norm',
@@ -12,6 +13,7 @@ SCIPY_ALIASES = {
     'multivariate_gaussian': 'multivariate_normal'
 }
 
+# aliases to get numpy function from scipy name
 NUMPY_ALIASES = {
     'normal': 'normal',
     'norm': 'normal',
@@ -23,6 +25,7 @@ NUMPY_ALIASES = {
     'expon': 'exponential'
 }
 
+# some samplers from numpy do not work due to differences in parametrization from scipy
 VALID_NUMPY_SAMPLERS = [
     'beta', 'dirichlet', 'f', 'laplace', 'multinomial', 'multivariate_normal',
     'gamma', 'exponential', 'normal', 'uniform', 'binomial', 'poisson'

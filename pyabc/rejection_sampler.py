@@ -68,12 +68,14 @@ class RejectionSampler(BaseSampler):
     def _run_rejection_sampling(self, nr_samples, batch_size):
         """the abc rejection sampling algorithm with batches"""
 
+        # observed data and their summary statistics
         X = self.observation
-
         stats_x = flatten_function(self.summaries, X)
 
+        # convenience function to compute summaries of generated data
         summaries = lambda thetas: flatten_function(self.summaries, self.simulator(*thetas))
 
+        # initialize the loop
         accepted_thetas = []
 
         start = time.clock()
@@ -84,11 +86,15 @@ class RejectionSampler(BaseSampler):
             nr_batches += 1
             # draw batch_size parameters from priors
             thetas_batch = self.sample_from_priors(batch_size)
+            # compute the summary statistics for this batch
             summaries_batch = np.apply_along_axis(summaries, axis=1, arr=thetas_batch)
+            # compute the distances for this batch
             d_batch = np.apply_along_axis(lambda stats_y: self.distance(stats_x, stats_y), axis=1, arr=summaries_batch)
 
+            # accept only those thetas with a distance lower than the threshold
             accepted_thetas.extend(thetas_batch[d_batch < self.threshold])
 
+        # we only want nr_samples samples. throw away what's too much
         accepted_thetas = accepted_thetas[:nr_samples]
         thetas = np.array(accepted_thetas)
 
