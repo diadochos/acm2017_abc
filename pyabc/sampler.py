@@ -24,7 +24,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
     # dict value parameters
     __distances = {
         'euclidean':
-            lambda x,y: np.linalg.norm(x-y)
+            lambda x,y: np.linalg.norm(x-y, axis=1)
     }
 
     # set and get simulator

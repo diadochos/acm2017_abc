@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 
+
 class RejectionSampler(BaseSampler):
     """The summary line for a class docstring should fit on one line.
 
@@ -55,54 +56,52 @@ class RejectionSampler(BaseSampler):
         self._nr_iter = 0
         self._Thetas = np.empty(0)
 
-    def sample_from_priors(self):
+    def sample_from_priors(self, size):
         """draw samples from all priors and return as list of outputs
 
         :return list of outputs for each prior
         """
-        return [p.sample() for p in self.priors]
+        return np.vstack([p.sample(size) for p in self.priors]).T
 
 
     def _flatten_output(self, x):
         return np.hstack(np.atleast_1d(e).flatten() for e in x)
 
-    def _run_rejection_sampling(self, nr_samples):
-        """the abc rejection sampling algorithm"""
+    def _run_rejection_sampling(self, nr_samples, batch_size):
+        """the abc rejection sampling algorithm with batches"""
 
         X = self.observation
 
-        list_of_stats_x = flatten_function(self.summaries, X)
+        stats_x = flatten_function(self.summaries, X)
 
-        thetas = np.zeros((nr_samples, sum(np.atleast_1d(a).shape[0] for a in self.sample_from_priors())))
+        summaries = lambda thetas: flatten_function(self.summaries, self.simulator(*thetas))
 
-        nr_iter = 0
+        accepted_thetas = []
+
         start = time.clock()
-        for i in range(nr_samples):
-            while True:
-                nr_iter += 1
 
-                thetas_prop = self.sample_from_priors()  # draw as many thetas as there are priors
-                Y = self.simulator(*thetas_prop)  # unpack thetas as single arguments for simulator
-                list_of_stats_y = flatten_function(self.summaries, Y)
+        nr_batches = 0
 
-                if any(s1.shape != s2.shape for s1,s2 in zip(list_of_stats_x, list_of_stats_y)):
-                    raise ValueError("Dimensions of summary statistics for observation X ({}) and simulation data Y ({}) are not the same".format(list_of_stats_x, list_of_stats_y))
+        while len(accepted_thetas) < nr_samples:
+            nr_batches += 1
+            # draw batch_size parameters from priors
+            thetas_batch = self.sample_from_priors(batch_size)
+            summaries_batch = np.apply_along_axis(summaries, axis=1, arr=thetas_batch)
+            d_batch = self.distance(stats_x, summaries_batch)
 
-                # either use predefined distance function or user defined discrepancy function
-                d = self.distance(list_of_stats_x, list_of_stats_y)
+            accepted_thetas.extend(thetas_batch[d_batch < self.threshold])
 
-                if d < self.threshold:
-                    thetas[i, :] = self._flatten_output(thetas_prop)
-                    break
+        accepted_thetas = accepted_thetas[:nr_samples]
+        thetas = np.array(accepted_thetas)
 
         self._runtime = time.clock() - start
 
-        self._nr_iter = nr_iter
+        self._nr_iter = (nr_batches * batch_size)
         self._Thetas = thetas
-        return self.Thetas
+        return thetas
 
 
-    def sample(self, threshold, nr_samples):
+    def sample(self, threshold, nr_samples, batch_size=1000):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
 
         Args:
@@ -121,10 +120,10 @@ class RejectionSampler(BaseSampler):
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
-        self._run_rejection_sampling(nr_samples)
+        self._run_rejection_sampling(nr_samples, batch_size)
 
         if self.verbosity == 1:
-            print("Samples: %6d - Threshold: %.2f - Iterations: %10d - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.runtime))
+            print("Samples: %6d - Threshold: %.2f - Number of iterations: %10d - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.runtime))
 
     def plot_marginals(self, names=[]):
         """func doc"""
@@ -153,11 +152,3 @@ class RejectionSampler(BaseSampler):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(
             type(self).__name__, len(self.priors), self.simulator, len(self.summaries), self.observation.shape, self.discrepancy, self.verbosity
         )
-
-
-
-if __name__ == '__main__':
-    print('Subclass:', issubclass(RejectionSampler,
-                                  BaseSampler))
-    print('Instance:', isinstance(RejectionSampler(),
-                                  BaseSampler))
