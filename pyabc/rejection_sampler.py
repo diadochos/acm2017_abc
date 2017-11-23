@@ -80,6 +80,7 @@ class RejectionSampler(BaseSampler):
 
         # initialize the loop
         accepted_thetas = []
+        distances = []
 
         start = time.clock()
 
@@ -96,6 +97,7 @@ class RejectionSampler(BaseSampler):
 
             # accept only those thetas with a distance lower than the threshold
             accepted_thetas.extend(thetas_batch[d_batch < self.threshold])
+            distances.extend(d_batch[d_batch < self.threshold])
 
         # we only want nr_samples samples. throw away what's too much
         accepted_thetas = accepted_thetas[:nr_samples]
@@ -104,7 +106,9 @@ class RejectionSampler(BaseSampler):
         self._runtime = time.clock() - start
 
         self._nr_iter = (nr_batches * batch_size)
+        self._acceptance_rate = nr_samples / self.nr_iter
         self._Thetas = thetas
+        self._distances = distances[:nr_samples]
         return thetas
 
 
@@ -130,7 +134,7 @@ class RejectionSampler(BaseSampler):
         self._run_rejection_sampling(nr_samples, batch_size)
 
         if self.verbosity == 1:
-            print("Samples: %6d - Threshold: %.2f - Number of iterations: %10d - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.runtime))
+            print("Samples: %6d - Threshold: %.2f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
 
 
     def plot_marginals(self, names=[]):

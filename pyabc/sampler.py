@@ -147,7 +147,15 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     @property
     def distances(self):
-        return self.__distances
+        return self.__distance
+
+    @property
+    def acceptance_rate(self):
+        return self._acceptance_rate
+
+    @property
+    def distances(self):
+        return self._distances
 
 
     @abc.abstractmethod

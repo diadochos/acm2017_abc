@@ -58,7 +58,7 @@ class SMCSampler(BaseSampler):
         self._reset()
         self._run_PMC_sampling(nr_samples)
         if self.verbosity == 1:
-            print("Samples: %6d - Thresholds: %.2f - Iterations: %10d - Time: %8.2f s" % (nr_samples, self.thresholds[len(self.thresholds)-1], self.nr_iter, self.runtime))
+            print("Samples: %6d - Thresholds: %.2f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.thresholds[-1], self.nr_iter, self.acceptance_rate, self.runtime))
 
 
     def _calculate_weights(self,curr_theta,prev_thetas, ws, sigma):
@@ -79,13 +79,14 @@ class SMCSampler(BaseSampler):
         X = self.observation
 
         list_of_stats_x = flatten_function(self.summaries, X)
-        num_priors = len(self.priors)
+        num_priors = len(self.priors) # TODO: multivariate prior?
         nr_iter = 0
 
         #create a large array to store all particles (THIS CAN BE VERY MEMORY INTENSIVE)
-        thetas = np.zeros((T,nr_samples,num_priors))
-        weights = np.zeros((T,nr_samples))
-        sigma =  np.zeros((T,num_priors,num_priors))
+        thetas = np.zeros((T, nr_samples, num_priors))
+        weights = np.zeros((T, nr_samples))
+        sigma =  np.zeros((T, num_priors, num_priors))
+        distances = np.zeros((T, nr_samples))
 
         start = time.clock()
 
@@ -105,12 +106,13 @@ class SMCSampler(BaseSampler):
                 nr_iter += rej_samp.nr_iter
 
                 thetas[t,:,:] = rej_samp.Thetas
+                distances[t,:] = rej_samp.distances
                 #create even particle for each
                 weights[t,:] = np.ones(nr_samples) / nr_samples
                 sigma[t,:,:] = 2*np.cov(thetas[t,:,:].T)
             else:
                 print('starting iteration[', t,']')
-                for i in range(0,nr_samples):
+                for i in range(0, nr_samples):
                     while (True):
                         nr_iter += 1
                         #sample from the previous iteration, with weights and perturb the sample
@@ -124,6 +126,7 @@ class SMCSampler(BaseSampler):
                         d = self.distance(list_of_stats_x, list_of_stats_y)
 
                         if d < self.thresholds[t]:
+                            distances[t,i] = d
                             thetas[t,i,:] = thetap
                             weights[t,i] = self._calculate_weights(thetas[t,i,:],thetas[t-1,:], weights[t-1,:], sigma[t-1])
                             break
@@ -135,7 +138,9 @@ class SMCSampler(BaseSampler):
 
         self._runtime = time.clock() - start
         self._nr_iter = nr_iter
+        self._acceptance_rate = nr_samples / self.nr_iter
         self._Thetas = thetas[T-1,:,:]
+        self._distances = distances
 
         return thetas[T-1,:,:]
 
