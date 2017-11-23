@@ -2,12 +2,12 @@
 
 ## Finish these first
 
-- [ ] SMC Plots: Marginal and Particles
-- [ ] Save distances of accepted parameters
-- [ ] acceptance rate
-- [ ] BOLFI
-- [ ] Example module (Clinic etc)
-- [ ] MCMC
+- [ ] SMC Plots: Marginal and Particles (Michael)
+- [ ] Save distances of accepted parameters (Michael)
+- [ ] acceptance rate (Michael)
+- [ ] BOLFI (Michael + Dominik)
+- [ ] Example module (Clinic etc) (Dominik)
+- [ ] MCMC (Fabian)
 
 ## Then
 
