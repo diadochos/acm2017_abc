@@ -58,15 +58,9 @@ class Prior():
             raise ValueError('"{}" is not a valid scipy distribution.'.format(name))
 
 
-
-
-
     def sample(self, size=None):
         return self._sample(size)
 
+
     def pdf(self, theta):
         return self.distribution.pdf(theta)
-
-    # @abc.abstractmethod
-    # def plot_marginal(self):
-    #     pass

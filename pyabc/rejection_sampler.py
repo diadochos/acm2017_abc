@@ -26,6 +26,7 @@ class RejectionSampler(BaseSampler):
     def threshold(self):
         return self._threshold
 
+
     @threshold.setter
     def threshold(self, threshold):
         if isinstance(threshold, (int, float)):
@@ -51,10 +52,12 @@ class RejectionSampler(BaseSampler):
         if seed is not None:
             np.random.seed(seed)
 
+
     def _reset(self):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
+
 
     def sample_from_priors(self, size):
         """draw samples from all priors and return as list of outputs
@@ -62,7 +65,6 @@ class RejectionSampler(BaseSampler):
         :return list of outputs for each prior
         """
         return np.vstack([p.sample(size) for p in self.priors]).T
-
 
 
     def _run_rejection_sampling(self, nr_samples, batch_size):
@@ -73,7 +75,8 @@ class RejectionSampler(BaseSampler):
         stats_x = flatten_function(self.summaries, X)
 
         # convenience function to compute summaries of generated data
-        summaries = lambda thetas: flatten_function(self.summaries, self.simulator(*thetas))
+        simulate_and_summarize = lambda thetas: flatten_function(self.summaries, self.simulator(*thetas))
+        compute_distance = lambda stats_y: self.distance(stats_x, stats_y)
 
         # initialize the loop
         accepted_thetas = []
@@ -87,9 +90,9 @@ class RejectionSampler(BaseSampler):
             # draw batch_size parameters from priors
             thetas_batch = self.sample_from_priors(batch_size)
             # compute the summary statistics for this batch
-            summaries_batch = np.apply_along_axis(summaries, axis=1, arr=thetas_batch)
+            summaries_batch = np.apply_along_axis(simulate_and_summarize, axis=1, arr=thetas_batch)
             # compute the distances for this batch
-            d_batch = np.apply_along_axis(lambda stats_y: self.distance(stats_x, stats_y), axis=1, arr=summaries_batch)
+            d_batch = np.apply_along_axis(compute_distance, axis=1, arr=summaries_batch)
 
             # accept only those thetas with a distance lower than the threshold
             accepted_thetas.extend(thetas_batch[d_batch < self.threshold])
@@ -129,6 +132,7 @@ class RejectionSampler(BaseSampler):
         if self.verbosity == 1:
             print("Samples: %6d - Threshold: %.2f - Number of iterations: %10d - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.runtime))
 
+
     def plot_marginals(self, names=[]):
         """func doc"""
 
@@ -151,6 +155,7 @@ class RejectionSampler(BaseSampler):
 
         fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(self.threshold, self.Thetas.shape[0]))
         plt.show()
+
 
     def __str__(self):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(
