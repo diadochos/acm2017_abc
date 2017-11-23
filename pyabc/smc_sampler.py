@@ -148,6 +148,7 @@ class SMCSampler(BaseSampler):
     def plot_marginals(self):
         pass
 
+
     def _reset(self):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0

@@ -137,30 +137,6 @@ class RejectionSampler(BaseSampler):
             print("Samples: %6d - Threshold: %.2f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
 
 
-    def plot_marginals(self, names=[]):
-        """func doc"""
-
-        if self.Thetas.shape == (0,):
-            raise Warning("Method was called before sampling was done")
-
-        nr_plots = self.Thetas.shape[1] # number of columns
-
-        fig, ax = plt.subplots(1, nr_plots)
-
-        for plot_id, hist in enumerate(self.Thetas.T):
-            if nr_plots == 1:
-                _ax = ax
-            else :
-                _ax = ax[plot_id]
-
-            _ax.hist(hist, edgecolor="k", bins='auto', normed=True)
-            if names and len(names) == nr_plots:
-               _ax.set_xlabel(names[plot_id])
-
-        fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(self.threshold, self.Thetas.shape[0]))
-        plt.show()
-
-
     def __str__(self):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(
             type(self).__name__, len(self.priors), self.simulator, len(self.summaries), self.observation.shape, self.discrepancy, self.verbosity

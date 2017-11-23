@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats as ss
+import pylab as plt
 from functools import partial
 
 # some aliases for convenient call of scipy functions
@@ -30,6 +31,8 @@ VALID_NUMPY_SAMPLERS = [
     'beta', 'dirichlet', 'f', 'laplace', 'multinomial', 'multivariate_normal',
     'gamma', 'exponential', 'normal', 'uniform', 'binomial', 'poisson'
 ]
+
+PLOTS_PER_ROW = 3
 
 
 def scipy_from_str(name):
@@ -69,3 +72,39 @@ def flatten_function(list_of_f, args=None):
             ret = np.concatenate((ret, np.atleast_1d(f(args)).flatten()))
 
     return ret
+
+
+def plot_marginals(sampler):
+    """take a sampler and plot the posterior distribution for all model parameter thetas
+    :param sampler: instance of BaseSampler
+    """
+    if sampler.Thetas.shape == (0,):
+        raise Warning("Method was called before sampling was done")
+
+    nr_plots = sampler.Thetas.shape[1] # number of columns = model parameters
+    nr_rows = (nr_plots // PLOTS_PER_ROW) + 1 #has to start by one
+    names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
+
+    fig, ax = plt.subplots(nr_rows, (nr_rows-1) * PLOTS_PER_ROW + nr_plots % PLOTS_PER_ROW)
+
+    for plot_id, hist in enumerate(sampler.Thetas.T):
+        if nr_plots == 1:
+            _ax = ax
+        else :
+            _ax = ax[plot_id]
+
+        _ax.hist(hist, edgecolor="k", bins='auto', normed=True)
+        _ax.set_xlabel(names[plot_id])
+
+    try:
+        thresholds = getattr(sampler, 'thresholds')
+        threshold = thresholds[-1]
+    except:
+        threshold = getattr(sampler, 'threshold')
+
+    fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
+        threshold,
+        sampler.Thetas.shape[0]
+    ))
+
+    plt.show()
