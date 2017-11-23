@@ -22,11 +22,14 @@ class Prior():
 
     @name.setter
     def name(self, name):
-        if not isinstance(name, str):
+        if name is None:
+            name = ''
+        elif not isinstance(name, str):
             raise TypeError("Passed argument {} has to be str.".format(name))
+
         self._name = name
 
-    def __init__(self, name, scipy_dist, *args):
+    def __init__(self, scipy_dist, *args, name=None):
         """Initialize the scipy and numpy objects.
 
         Args:
