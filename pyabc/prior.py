@@ -18,7 +18,16 @@ class Prior():
 
     @property
     def name(self):
-        return self._name
+        base_name = self._name
+        names = []
+        if isinstance(self.distribution, ss._multivariate.multi_rv_frozen):
+            for i in range(self.sample().shape[0]):
+                names.append("{}_{}".format(base_name, i + 1))
+
+            return names
+        else:
+            return self._name
+
 
     @name.setter
     def name(self, name):
