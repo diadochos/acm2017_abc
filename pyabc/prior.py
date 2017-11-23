@@ -16,28 +16,39 @@ class Prior():
 
     """
 
-    def __init__(self, name, *args):
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if not isinstance(name, str):
+            raise TypeError("Passed argument {} has to be str.".format(name))
+        self._name = name
+
+    def __init__(self, name, scipy_dist, *args):
         """Initialize the scipy and numpy objects.
 
         Args:
-            name (str): name of the distribution. Can be one of the distributions
+            name (str): name of model parameter
+            scipy_dist (str): name of the distribution. Can be one of the distributions
                 from the scipy.stats module
             *args: the distribution's parameters. See scipy documentation
         """
+        self.name = name
 
-        # we only accept strings
         # maybe implement custom functions in the future
-        if not isinstance(name, str):
-            raise TypeError("Passed argument {} has to be str.".format(name))
+        if not isinstance(scipy_dist, str):
+            raise TypeError("Passed argument {} has to be str.".format(scipy_dist))
 
         try:
             # set the distribution to the corresponding scipy object
-            self.distribution = scipy_from_str(name)(*args)
+            self.distribution = scipy_from_str(scipy_dist)(*args)
 
             try:
                 # try to set the sampler to the numpy function if it exists
                 # because numpy samplers are faster than scipy
-                sampler = numpy_sampler_from_str(name, *args)
+                sampler = numpy_sampler_from_str(scipy_dist, *args)
 
             # if that fails, fall back to the scipy function
             except:
@@ -55,7 +66,7 @@ class Prior():
             raise ValueError('The provided arguments have to be valid for the specified scipy distribution.')
         except AttributeError:
             # if the scipy distribution does not exist
-            raise ValueError('"{}" is not a valid scipy distribution.'.format(name))
+            raise ValueError('"{}" is not a valid scipy distribution.'.format(scipy_dist))
 
 
     def sample(self, size=None):

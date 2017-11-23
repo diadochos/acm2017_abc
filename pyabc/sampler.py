@@ -163,9 +163,5 @@ class BaseSampler(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def plot_marginals(self):
-        pass
-
-    @abc.abstractmethod
     def _reset(self):
         pass
