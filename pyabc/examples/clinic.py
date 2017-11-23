@@ -1,5 +1,5 @@
 import numpy as np
-from .example import Example
+from .base_example import Example
 
 def closing_time(y):
     return np.atleast_1d(y[2])
