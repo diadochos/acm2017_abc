@@ -2,7 +2,6 @@ import numpy as np
 import scipy.stats as ss
 import matplotlib.pyplot as plt
 from functools import partial
-from sklearn.neighbors.kde import KernelDensity
 
 # some aliases for convenient call of scipy functions
 SCIPY_ALIASES = {
@@ -80,11 +79,11 @@ def normalize_vector(v):
     v_norm = np.linalg.norm(v)
     if v_norm:
         v = v / v_norm
-        
+
     return v
 
 
-def plot_marginals(sampler, kde=False, h=0.2):
+def plot_marginals(sampler, kde=False, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     """
@@ -109,11 +108,13 @@ def plot_marginals(sampler, kde=False, h=0.2):
         plt.axvline(np.mean(thetas), linewidth=1.2, color="m", linestyle="--", label="mean")
         # plot MAP
         if kde:
-            kde = KernelDensity(kernel='gaussian', bandwidth=h).fit(thetas.reshape(-1,1))
+            # get the bandwidth method argument for scipy
+            # and run scipy's kde
+            kde = ss.kde.gaussian_kde(thetas, bw_method=kwargs.get('bw_method'))
             xx = np.linspace(np.min(thetas)-0.1, np.max(thetas)+0.1, 200)
-            log_dens = kde.score_samples(xx.reshape(-1,1))
-            plt.plot(xx, np.exp(log_dens))
-            plt.axvline(xx[np.argmax(log_dens)],linewidth=1.2, color="m", linestyle=":", label="MAP")
+            dens = kde(xx)
+            plt.plot(xx, dens)
+            plt.axvline(xx[np.argmax(dens)],linewidth=1.2, color="m", linestyle=":", label="MAP")
 
 
         # label of axis

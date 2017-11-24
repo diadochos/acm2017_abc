@@ -26,5 +26,4 @@ def var(x):
 rej_samp = pyabc.RejectionSampler(priors=[p1, p2], simulator=simulator, summaries=[mean, var], observation=y0)
 
 rej_samp.sample(0.5, 1000, batch_size=1000)
-plot_marginals(rej_samp)
-plt.show()
+plot_marginals(rej_samp, kde=True)
