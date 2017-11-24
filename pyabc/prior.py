@@ -1,6 +1,7 @@
 from .utils import scipy_from_str, numpy_sampler_from_str
 from functools import partial
 import scipy.stats as ss
+import numpy as np
 
 
 class Prior():
@@ -20,8 +21,8 @@ class Prior():
     def name(self):
         base_name = self._name
         names = []
-        if isinstance(self.distribution, ss._multivariate.multi_rv_frozen):
-            for i in range(self.sample().shape[0]):
+        if self.multivariate():
+            for i in range(len(self)):
                 names.append("{}_{}".format(base_name, i + 1))
 
             return names
@@ -68,7 +69,7 @@ class Prior():
 
             # if the prior is multivariate, the samples need to be returned
             # in a transposed format for the rejection sampler to work
-            if isinstance(self.distribution, ss._multivariate.multi_rv_frozen):
+            if self.multivariate():
                 self._sample = lambda s: sampler(size=s).T
             else:
                 self._sample = sampler
@@ -80,6 +81,15 @@ class Prior():
             # if the scipy distribution does not exist
             raise ValueError('"{}" is not a valid scipy distribution.'.format(scipy_dist))
 
+    def multivariate(self):
+        return isinstance(self.distribution, ss._multivariate.multi_rv_frozen)
+
+    def __len__(self):
+        if self.multivariate():
+            return self.sample().shape[0]
+        else:
+            return 1
+
 
     def sample(self, size=None):
         return self._sample(size)
@@ -87,3 +97,13 @@ class Prior():
 
     def pdf(self, theta):
         return self.distribution.pdf(theta)
+
+class PriorList():
+    def __init__(self, priors):
+        self.priors = priors
+
+    def sample(self, size):
+        return np.vstack([p.sample(size) for p in self.priors]).T
+
+    def __len__(self):
+        return sum([len(p) for p in self.priors])

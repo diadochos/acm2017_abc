@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats as ss
-import pylab as plt
+import matplotlib.pyplot as plt
 from functools import partial
 
 # some aliases for convenient call of scipy functions

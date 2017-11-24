@@ -72,7 +72,7 @@ class RejectionSampler(BaseSampler):
         while len(accepted_thetas) < nr_samples:
             nr_batches += 1
             # draw batch_size parameters from priors
-            thetas_batch = self.sample_from_priors(batch_size)
+            thetas_batch = self.priors.sample(batch_size)
             # compute the summary statistics for this batch
             summaries_batch = np.apply_along_axis(simulate_and_summarize, axis=1, arr=thetas_batch)
             # compute the distances for this batch

@@ -2,7 +2,7 @@
 
 import abc
 import numpy as np
-from .prior import Prior
+from .prior import Prior, PriorList
 
 class BaseSampler(metaclass=abc.ABCMeta):
     """Abstract base class for all samplers. Defines common setters and properties
@@ -65,18 +65,10 @@ class BaseSampler(metaclass=abc.ABCMeta):
         """func doc"""
         priors = np.atleast_1d(priors)
         if all(issubclass(type(p),Prior) for p in priors):
-             self._priors = priors
+             self._priors = PriorList(priors)
         else:
             print(all(issubclass(p,Prior) for p in priors))
             raise TypeError("Passed argument {} is not a subclass of prior!".format(priors))
-
-
-    def sample_from_priors(self, size):
-        """draw samples from all priors and return as list of outputs
-
-        :return list of outputs for each prior
-        """
-        return np.vstack([p.sample(size) for p in self.priors]).T
 
     # set and get summaries
     @property

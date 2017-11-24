@@ -7,7 +7,7 @@ sigma = np.diag([1,1])
 
 y0 = np.random.multivariate_normal(mu, sigma, 10)
 
-#prior_mu = pyabc.Prior('multivariate_normal', np.array([0,0]), np.diag([1,1]))
+# prior_mu = pyabc.Prior('multivariate_normal', np.array([0,0]), np.diag([1,1]))
 
 p1 = pyabc.Prior('normal', 0, 1)
 p2 = pyabc.Prior('normal', 0, 1)
