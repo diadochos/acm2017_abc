@@ -2,6 +2,7 @@ import numpy as np
 import scipy.stats as ss
 import matplotlib.pyplot as plt
 from functools import partial
+from sklearn.neighbors.kde import KernelDensity
 
 # some aliases for convenient call of scipy functions
 SCIPY_ALIASES = {
@@ -83,7 +84,7 @@ def normalize_vector(v):
     return v
 
 
-def plot_marginals(sampler):
+def plot_marginals(sampler, kde=False, h=0.2):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     """
@@ -98,12 +99,28 @@ def plot_marginals(sampler):
 
     fig = plt.figure()
 
+    # plot thetas of last iteration
     for plot_id, thetas in enumerate(sampler.Thetas.T):
         plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id+1)
 
+        # plot posterior
         plt.hist(thetas, edgecolor="k", bins='auto', normed=True)
+        # plot mean
+        plt.axvline(np.mean(thetas), linewidth=1.2, color="m", linestyle="--")
+        # plot MAP
+        if kde:
+            kde = KernelDensity(kernel='gaussian', bandwidth=h).fit(thetas.reshape(-1,1))
+            xx = np.linspace(np.min(thetas)-0.1, np.max(thetas)+0.1, 200)
+            log_dens = kde.score_samples(xx.reshape(-1,1))
+            plt.plot(xx, np.exp(log_dens))
+            plt.axvline(xx[np.argmax(log_dens)],linewidth=1.2, color="m", linestyle=":")
+
+
+        # label of axis
         plt.xlabel(names[plot_id])
 
+
+    # generate title
     try:
         thresholds = getattr(sampler, 'thresholds')
         threshold = thresholds[-1]
