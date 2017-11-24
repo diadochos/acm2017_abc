@@ -5,7 +5,8 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from GPyOpt.methods import BayesianOptimization
 import numpy as np
-
+import scipy.stats as ss
+import emcee
 
 class BOLFI(BaseSampler):
 
@@ -30,7 +31,7 @@ class BOLFI(BaseSampler):
 
         self.domain = domain
 
-    def sample(self):
+    def sample(self, threshold):
 
         # summary statistics of the observed data
         stats_x = flatten_function(self.summaries, self.observation)
@@ -45,7 +46,7 @@ class BOLFI(BaseSampler):
         bounds = [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in zip(self.priors, self.domain)]
 
 
-        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='LCB',
+        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
                                      exact_feval=True, model_type='GP',
                                      num_cores=-1, initial_design_numdata=10,
                                      initial_design_type='sobol')
@@ -54,16 +55,25 @@ class BOLFI(BaseSampler):
         max_time = 60     # time budget
         eps      = 10e-6  # Minimum allows distance between the las two observations
 
+        print("Starting Bayesian Optimization")
+
         optim.run_optimization(max_iter, max_time, eps)
 
-        def likelihood(theta, h):
+        def loglikelihood(theta, h=0.5):
             # eqn 47 from BOLFI paper
             m, s = optim.model.predict(theta)
             # F = gaussian cdf, see eqn 28 in BOLFI paper
-            return ss.normal.logcdf((h - m) / s)
+            return ss.norm.logcdf((h - m) / s)
+
+        logposterior = lambda theta: loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
+
+        sampler = emcee.EnsembleSampler(100, 1, logposterior)
+        sampler.run_mcmc(self.priors.sample(100), 1000)
+
+        return sampler.flatchain
 
 
-        #TODO: now use this approximated likelihood for mcmc posterior inference
+
 
 
 
