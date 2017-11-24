@@ -27,6 +27,21 @@ class BaseSampler(metaclass=abc.ABCMeta):
             lambda x,y: np.linalg.norm(x-y)
     }
 
+    def __init__(self, priors, simulator, observation, summaries, distance, verbosity, seed):
+
+        self.priors = priors
+        self.simulator = simulator
+        self.observation = observation
+        self.summaries = summaries
+
+        # optional
+        self.verbosity = verbosity
+        self.distance = distance
+
+        if seed is not None:
+            np.random.seed(seed)
+
+
     # set and get simulator
     @property
     def simulator(self):

@@ -39,18 +39,9 @@ class RejectionSampler(BaseSampler):
 
     def __init__(self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None):
         """constructor"""
-        # must have
-        self.priors = priors
-        self.simulator = simulator
-        self.observation = observation
-        self.summaries = summaries
 
-        # optional
-        self.verbosity = verbosity
-        self.distance = distance
-
-        if seed is not None:
-            np.random.seed(seed)
+        # call BaseSampler __init__
+        super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
 
 
     def _reset(self):
