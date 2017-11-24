@@ -70,6 +70,14 @@ class BaseSampler(metaclass=abc.ABCMeta):
             print(all(issubclass(p,Prior) for p in priors))
             raise TypeError("Passed argument {} is not a subclass of prior!".format(priors))
 
+
+    def sample_from_priors(self, size):
+        """draw samples from all priors and return as list of outputs
+
+        :return list of outputs for each prior
+        """
+        return np.vstack([p.sample(size) for p in self.priors]).T
+
     # set and get summaries
     @property
     def summaries(self):

@@ -50,14 +50,6 @@ class RejectionSampler(BaseSampler):
         self._Thetas = np.empty(0)
 
 
-    def sample_from_priors(self, size):
-        """draw samples from all priors and return as list of outputs
-
-        :return list of outputs for each prior
-        """
-        return np.vstack([p.sample(size) for p in self.priors]).T
-
-
     def _run_rejection_sampling(self, nr_samples, batch_size):
         """the abc rejection sampling algorithm with batches"""
 
