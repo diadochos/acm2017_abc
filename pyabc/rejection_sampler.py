@@ -39,32 +39,15 @@ class RejectionSampler(BaseSampler):
 
     def __init__(self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None):
         """constructor"""
-        # must have
-        self.priors = priors
-        self.simulator = simulator
-        self.observation = observation
-        self.summaries = summaries
 
-        # optional
-        self.verbosity = verbosity
-        self.distance = distance
-
-        if seed is not None:
-            np.random.seed(seed)
+        # call BaseSampler __init__
+        super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
 
 
     def _reset(self):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
-
-
-    def sample_from_priors(self, size):
-        """draw samples from all priors and return as list of outputs
-
-        :return list of outputs for each prior
-        """
-        return np.vstack([p.sample(size) for p in self.priors]).T
 
 
     def _run_rejection_sampling(self, nr_samples, batch_size):
@@ -89,7 +72,7 @@ class RejectionSampler(BaseSampler):
         while len(accepted_thetas) < nr_samples:
             nr_batches += 1
             # draw batch_size parameters from priors
-            thetas_batch = self.sample_from_priors(batch_size)
+            thetas_batch = self.priors.sample(batch_size)
             # compute the summary statistics for this batch
             summaries_batch = np.apply_along_axis(simulate_and_summarize, axis=1, arr=thetas_batch)
             # compute the distances for this batch

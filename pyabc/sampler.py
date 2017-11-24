@@ -2,7 +2,7 @@
 
 import abc
 import numpy as np
-from .prior import Prior
+from .prior import Prior, PriorList
 
 class BaseSampler(metaclass=abc.ABCMeta):
     """Abstract base class for all samplers. Defines common setters and properties
@@ -27,6 +27,21 @@ class BaseSampler(metaclass=abc.ABCMeta):
             lambda x,y: np.linalg.norm(x-y)
     }
 
+    def __init__(self, priors, simulator, observation, summaries, distance, verbosity, seed):
+
+        self.priors = priors
+        self.simulator = simulator
+        self.observation = observation
+        self.summaries = summaries
+
+        # optional
+        self.verbosity = verbosity
+        self.distance = distance
+
+        if seed is not None:
+            np.random.seed(seed)
+
+
     # set and get simulator
     @property
     def simulator(self):
@@ -50,7 +65,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
         """func doc"""
         priors = np.atleast_1d(priors)
         if all(issubclass(type(p),Prior) for p in priors):
-             self._priors = priors
+             self._priors = PriorList(priors)
         else:
             print(all(issubclass(p,Prior) for p in priors))
             raise TypeError("Passed argument {} is not a subclass of prior!".format(priors))
