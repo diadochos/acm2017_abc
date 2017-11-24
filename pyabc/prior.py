@@ -98,10 +98,19 @@ class Prior():
     def pdf(self, theta):
         return self.distribution.pdf(theta)
 
+    def logpdf(self, theta):
+        return self.distribution.logpdf(theta)
+
 class PriorList(list):
 
     def sample(self, size):
         return np.vstack([p.sample(size) for p in self]).T
+
+    def pdf(self, theta):
+        return np.prod([p.pdf(theta) for p in self])
+
+    def logpdf(self, theta):
+        return sum([p.logpdf(theta) for p in self])
 
     def __len__(self):
         return sum([len(p) for p in self])
