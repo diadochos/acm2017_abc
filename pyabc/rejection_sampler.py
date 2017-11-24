@@ -94,10 +94,9 @@ class RejectionSampler(BaseSampler):
             summaries_batch = np.apply_along_axis(simulate_and_summarize, axis=1, arr=thetas_batch)
             # compute the distances for this batch
             d_batch = np.apply_along_axis(compute_distance, axis=1, arr=summaries_batch)
-
             # accept only those thetas with a distance lower than the threshold
-            accepted_thetas.extend(thetas_batch[d_batch < self.threshold])
-            distances.extend(d_batch[d_batch < self.threshold])
+            accepted_thetas.extend(thetas_batch[d_batch <= self.threshold])
+            distances.extend(d_batch[d_batch <= self.threshold])
 
         # we only want nr_samples samples. throw away what's too much
         accepted_thetas = accepted_thetas[:nr_samples]

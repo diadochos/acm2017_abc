@@ -125,7 +125,7 @@ class SMCSampler(BaseSampler):
                         # either use predefined distance function or user defined discrepancy function
                         d = self.distance(list_of_stats_x, list_of_stats_y)
 
-                        if d < self.thresholds[t]:
+                        if d <= self.thresholds[t]:
                             distances[t,i] = d
                             thetas[t,i,:] = thetap
                             weights[t,i] = self._calculate_weights(thetas[t,i,:],thetas[t-1,:], weights[t-1,:], sigma[t-1])
