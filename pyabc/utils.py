@@ -104,20 +104,21 @@ def plot_marginals(sampler, kde=False, h=0.2):
         plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id+1)
 
         # plot posterior
-        plt.hist(thetas, edgecolor="k", bins='auto', normed=True)
+        plt.hist(thetas, edgecolor="k", bins='auto', normed=True, alpha=0.4)
         # plot mean
-        plt.axvline(np.mean(thetas), linewidth=1.2, color="m", linestyle="--")
+        plt.axvline(np.mean(thetas), linewidth=1.2, color="m", linestyle="--", label="mean")
         # plot MAP
         if kde:
             kde = KernelDensity(kernel='gaussian', bandwidth=h).fit(thetas.reshape(-1,1))
             xx = np.linspace(np.min(thetas)-0.1, np.max(thetas)+0.1, 200)
             log_dens = kde.score_samples(xx.reshape(-1,1))
             plt.plot(xx, np.exp(log_dens))
-            plt.axvline(xx[np.argmax(log_dens)],linewidth=1.2, color="m", linestyle=":")
+            plt.axvline(xx[np.argmax(log_dens)],linewidth=1.2, color="m", linestyle=":", label="MAP")
 
 
         # label of axis
         plt.xlabel(names[plot_id])
+        plt.legend(loc="upper right")
 
 
     # generate title
