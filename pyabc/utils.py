@@ -56,6 +56,8 @@ def numpy_sampler_from_str(name, *args):
         elif name == 'exponential':
             # add the the loc parameter
             return lambda size: np_function(args[1], size=size) + args[0]
+        elif name == 'gamma':
+            return lambda size: np_function(args[0], args[2], size=size) + args[1]
         else:
             return partial(np_function, *args)
     else:
