@@ -113,7 +113,7 @@ def plot_marginals(sampler):
     fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
         threshold,
         sampler.Thetas.shape[0]
-    ), y=1.08)
+    ), y=1)
 
-    plt.tight_layout()
+    plt.tight_layout(rect=[0,0,0.9,0.9])
     plt.show()
