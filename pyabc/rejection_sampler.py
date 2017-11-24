@@ -1,5 +1,5 @@
 from .sampler import BaseSampler
-from .utils import flatten_function
+from .utils import flatten_function, normalize_vector
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -72,10 +72,10 @@ class RejectionSampler(BaseSampler):
 
         # observed data and their summary statistics
         X = self.observation
-        stats_x = flatten_function(self.summaries, X)
+        stats_x = normalize_vector(flatten_function(self.summaries, X))
 
         # convenience function to compute summaries of generated data
-        simulate_and_summarize = lambda thetas: flatten_function(self.summaries, self.simulator(*thetas))
+        simulate_and_summarize = lambda thetas: normalize_vector(flatten_function(self.summaries, self.simulator(*thetas)))
         compute_distance = lambda stats_y: self.distance(stats_x, stats_y)
 
         # initialize the loop
@@ -94,6 +94,7 @@ class RejectionSampler(BaseSampler):
             summaries_batch = np.apply_along_axis(simulate_and_summarize, axis=1, arr=thetas_batch)
             # compute the distances for this batch
             d_batch = np.apply_along_axis(compute_distance, axis=1, arr=summaries_batch)
+
             # accept only those thetas with a distance lower than the threshold
             accepted_thetas.extend(thetas_batch[d_batch <= self.threshold])
             distances.extend(d_batch[d_batch <= self.threshold])
