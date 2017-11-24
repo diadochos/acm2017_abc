@@ -6,6 +6,7 @@ with warnings.catch_warnings():
     from GPyOpt.methods import BayesianOptimization
 import numpy as np
 
+
 class BOLFI(BaseSampler):
 
     @property
@@ -44,7 +45,7 @@ class BOLFI(BaseSampler):
         bounds = [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in zip(self.priors, self.domain)]
 
 
-        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
+        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='LCB',
                                      exact_feval=True, model_type='GP',
                                      num_cores=-1, initial_design_numdata=10,
                                      initial_design_type='sobol')
@@ -55,7 +56,14 @@ class BOLFI(BaseSampler):
 
         optim.run_optimization(max_iter, max_time, eps)
 
-        return optim.x_opt
+        def likelihood(theta, h):
+            # eqn 47 from BOLFI paper
+            m, s = optim.model.predict(theta)
+            # F = gaussian cdf, see eqn 28 in BOLFI paper
+            return ss.normal.logcdf((h - m) / s)
+
+
+        #TODO: now use this approximated likelihood for mcmc posterior inference
 
 
 
