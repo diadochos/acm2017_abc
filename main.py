@@ -1,5 +1,7 @@
 import pyabc
 import numpy as np
+from pyabc.utils import plot_marginals
+import matplotlib.pyplot as plt
 
 # multivaraite test
 mu = np.array([1,2])
@@ -23,4 +25,6 @@ def var(x):
 
 rej_samp = pyabc.RejectionSampler(priors=[p1, p2], simulator=simulator, summaries=[mean, var], observation=y0)
 
-rej_samp.sample(0.5, 100, batch_size=1000)
+rej_samp.sample(0.5, 1000, batch_size=1000)
+plot_marginals(rej_samp)
+plt.show()

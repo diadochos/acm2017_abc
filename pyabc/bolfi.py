@@ -1,6 +1,9 @@
 from .sampler import BaseSampler
 from .utils import flatten_function
-from GPyOpt.methods import BayesianOptimization
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    from GPyOpt.methods import BayesianOptimization
 import numpy as np
 
 class BOLFI(BaseSampler):
@@ -24,8 +27,6 @@ class BOLFI(BaseSampler):
         # call BaseSampler __init__
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
 
-        print(len(self.priors))
-
         self.domain = domain
 
     def sample(self):
@@ -40,20 +41,21 @@ class BOLFI(BaseSampler):
         # evidence_theta = self.priors.sample(10)
         # evidence_f = np.apply_along_axis(f, axis=1, arr=evidence_theta)
 
-        #TODO: construct this thing!!!
-        #bounds =[{'name': 'var_1', 'type': 'continuous', 'domain': f_true.bounds[0]},
-        # {'name': 'var_2', 'type': 'continuous', 'domain': f_true.bounds[1]}]
+        bounds = [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in zip(self.priors, self.domain)]
 
-        # optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
-        #                              exact_feval=True, model_type='GP',
-        #                              num_cores=-1, initial_design_numdata=10,
-        #                              initial_design_type='sobol')
-        #
-        # max_iter = 30    # evaluation budget
-        # max_time = 60     # time budget
-        # eps      = 10e-6  # Minimum allows distance between the las two observations
-        #
-        # optim.run_optimization(max_iter, max_time, eps)
+
+        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
+                                     exact_feval=True, model_type='GP',
+                                     num_cores=-1, initial_design_numdata=10,
+                                     initial_design_type='sobol')
+
+        max_iter = 30    # evaluation budget
+        max_time = 60     # time budget
+        eps      = 10e-6  # Minimum allows distance between the las two observations
+
+        optim.run_optimization(max_iter, max_time, eps)
+
+        return optim.x_opt
 
 
 
