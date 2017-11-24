@@ -74,6 +74,15 @@ def flatten_function(list_of_f, args=None):
     return ret
 
 
+def normalize_vector(v):
+    """normalize vector so that maximum value has value of 1"""
+    v_norm = np.linalg.norm(v)
+    if v_norm:
+        v = v / v_norm
+        
+    return v
+
+
 def plot_marginals(sampler):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
@@ -81,20 +90,19 @@ def plot_marginals(sampler):
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
+
     nr_plots = sampler.Thetas.shape[1] # number of columns = model parameters
-    nr_rows = (nr_plots // PLOTS_PER_ROW) + 1 #has to start by one
+    nr_rows = (nr_plots // (PLOTS_PER_ROW + 1)) + 1 #has to start by one
+
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
-    fig, ax = plt.subplots(nr_rows, (nr_rows-1) * PLOTS_PER_ROW + nr_plots % PLOTS_PER_ROW)
+    fig = plt.figure()
 
-    for plot_id, hist in enumerate(sampler.Thetas.T):
-        if nr_plots == 1:
-            _ax = ax
-        else :
-            _ax = ax[plot_id]
+    for plot_id, thetas in enumerate(sampler.Thetas.T):
+        plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id+1)
 
-        _ax.hist(hist, edgecolor="k", bins='auto', normed=True)
-        _ax.set_xlabel(names[plot_id])
+        plt.hist(thetas, edgecolor="k", bins='auto', normed=True)
+        plt.xlabel(names[plot_id])
 
     try:
         thresholds = getattr(sampler, 'thresholds')
@@ -105,6 +113,7 @@ def plot_marginals(sampler):
     fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
         threshold,
         sampler.Thetas.shape[0]
-    ))
+    ), y=1.08)
 
+    plt.tight_layout()
     plt.show()
