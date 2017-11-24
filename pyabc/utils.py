@@ -74,6 +74,15 @@ def flatten_function(list_of_f, args=None):
     return ret
 
 
+def normalize_vector(v):
+    """normalize vector so that maximum value has value of 1"""
+    v_norm = np.linalg.norm(v)
+    if v_norm:
+        v = v / v_norm
+        
+    return v
+
+
 def plot_marginals(sampler):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
