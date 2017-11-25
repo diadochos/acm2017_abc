@@ -161,7 +161,7 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True)
             if equal_axes:
                 plt.axis("equal")
 
-        plt.title("Distribution of Particles represented by their weights\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
-            sampler.thresholds[param_id], weights.shape[0]))
+        plt.title("Distribution of Particles represented by their weights\n" + r"$\epsilon \in {}, n = {}$".format(
+            sampler.thresholds, weights.shape[0]))
         plt.legend(loc="upper right")
         plt.show()
