@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.stats as ss
-import matplotlib.pyplot as plt
 from functools import partial
 
 # some aliases for convenient call of scipy functions
@@ -31,8 +30,6 @@ VALID_NUMPY_SAMPLERS = [
     'beta', 'dirichlet', 'f', 'laplace', 'multinomial', 'multivariate_normal',
     'gamma', 'exponential', 'normal', 'uniform', 'binomial', 'poisson'
 ]
-
-PLOTS_PER_ROW = 3
 
 
 def scipy_from_str(name):
@@ -83,58 +80,3 @@ def normalize_vector(v):
         v = v / v_norm
 
     return v
-
-
-def plot_marginals(sampler, kde=False, **kwargs):
-    """take a sampler and plot the posterior distribution for all model parameter thetas
-    :param sampler: instance of BaseSampler
-    """
-    if sampler.Thetas.shape == (0,):
-        raise Warning("Method was called before sampling was done")
-
-
-    nr_plots = sampler.Thetas.shape[1] # number of columns = model parameters
-    nr_rows = (nr_plots // (PLOTS_PER_ROW + 1)) + 1 #has to start by one
-
-    names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
-
-    fig = plt.figure()
-
-    # plot thetas of last iteration
-    for plot_id, thetas in enumerate(sampler.Thetas.T):
-        plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id+1)
-
-        # plot posterior
-        plt.hist(thetas, edgecolor="k", bins='auto', normed=True, alpha=0.4)
-        # plot mean
-        plt.axvline(np.mean(thetas), linewidth=1.2, color="m", linestyle="--", label="mean")
-        # plot MAP
-        if kde:
-            # get the bandwidth method argument for scipy
-            # and run scipy's kde
-            kde = ss.kde.gaussian_kde(thetas, bw_method=kwargs.get('bw_method'))
-            xx = np.linspace(np.min(thetas)-0.1, np.max(thetas)+0.1, 200)
-            dens = kde(xx)
-            plt.plot(xx, dens)
-            plt.axvline(xx[np.argmax(dens)],linewidth=1.2, color="m", linestyle=":", label="MAP")
-
-
-        # label of axis
-        plt.xlabel(names[plot_id])
-        plt.legend(loc="upper right")
-
-
-    # generate title
-    try:
-        thresholds = getattr(sampler, 'thresholds')
-        threshold = thresholds[-1]
-    except:
-        threshold = getattr(sampler, 'threshold')
-
-    fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
-        threshold,
-        sampler.Thetas.shape[0]
-    ), y=0.96)
-
-    plt.tight_layout(rect=[0.05,0,0.95,0.85])
-    plt.show()

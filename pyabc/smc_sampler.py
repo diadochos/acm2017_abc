@@ -22,6 +22,11 @@ class SMCSampler(BaseSampler):
         else:
             raise ValueError("Passed argument {} must not be a list of integers or float and non-negative".format(thresholds))
 
+    @property
+    def particles(self):
+        return self._particles
+
+
     def __init__(self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None):
 
         # call BaseSampler __init__
@@ -133,15 +138,11 @@ class SMCSampler(BaseSampler):
         self._runtime = time.clock() - start
         self._nr_iter = nr_iter
         self._acceptance_rate = nr_samples / self.nr_iter
+        self._particles = thetas
         self._Thetas = thetas[T-1,:,:]
         self._distances = distances
 
         return thetas[T-1,:,:]
-
-
-    def plot_marginals(self):
-        pass
-
 
     def _reset(self):
         """reset class properties for a new call of sample method"""
