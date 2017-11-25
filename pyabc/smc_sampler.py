@@ -131,7 +131,12 @@ class SMCSampler(BaseSampler):
                         if d <= self.thresholds[t]:
                             distances[t,i] = d
                             thetas[t,i,:] = thetap
-                            weights[t,i] = self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
+                            # weights represent how probable a theta is
+                            # small weights mean theta* is close to old thetas
+                            # heigh weights mean, theta* is far from old thetas
+                            # we want the close ones, so we have to invert the weights
+                            # so that small weights become the large ones
+                            weights[t,i] = 1 / self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
                             break
 
             print('Iteration', t , 'completed')
