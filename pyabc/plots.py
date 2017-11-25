@@ -33,7 +33,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=False, **kwar
                 # get the bandwidth method argument for scipy
                 # and run scipy's kde
                 kde = ss.kde.gaussian_kde(theta, bw_method=kwargs.get('bw_method'))
-                xx = np.linspace(np.min(theta) - 0.1, np.max(thetas) + 0.1, 200)
+                xx = np.linspace(np.min(theta) - 0.1, np.max(theta) + 0.1, 200)
                 dens = kde(xx)
                 plt.plot(xx, dens)
                 plt.axvline(xx[np.argmax(dens)], linewidth=1.2, color="m", linestyle=":", label="MAP")
