@@ -5,10 +5,11 @@ import pyabc
 
 PLOTS_PER_ROW = 3
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, kde=False, **kwargs):
+def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, as_circle=True, kde=False, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_particles: true - plot particels for all iterations, false - otherwise
+    :param as_circle: true - plot particles as circles on x-axis, otherwise as scatter plot
     :param kde: true - use kernel density estimation function of scipy.stats to draw posterior distribution
     :param kwargs: list of keyword arguments for kde function of scipy.stats
     """
@@ -50,7 +51,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, kde=False, 
         plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
         plt.show()
 
-    def _plot_particles(particles, weights, threshold):
+    def _plot_particles(particles, weights, threshold, as_circle=True):
         nonlocal sampler, kde, nr_rows, names, kwargs
 
         #norm weights
@@ -62,14 +63,24 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, kde=False, 
             fig = plt.figure()
 
             # draw for each theta a circle with radius equal to its weight
-            for i, x in enumerate(theta):
-                circle = plt.Circle((x, 0), radius=weights[i], alpha=0.4)
-                plt.gca().add_patch(circle)
+            if as_circle:
+                for i, x in enumerate(theta):
+                    circle = plt.Circle((x, 0), radius=weights[i], alpha=0.4)
+                    plt.gca().add_patch(circle)
 
-            plt.xlabel(names[plot_id])
-            plt.xlim([particles.min() - 0.1, particles.max() + 0.1])
-            plt.ylim([-weights.max(), weights.max()])
-            plt.axis("equal")
+                plt.ylabel("weight $w_{{i,t}}$")
+                plt.xlabel(names[plot_id])
+                plt.xlim([particles.min() - 0.1, particles.max() + 0.1])
+                plt.ylim([-weights.max(), weights.max()])
+                plt.axis("equal")
+
+            else:
+                plt.plot(theta, weights, "o", alpha=0.4)
+                plt.ylabel("weight $w_{{i,t}}$")
+
+                plt.xlabel(names[plot_id])
+                plt.xlim([particles.min() - 0.1, particles.max() + 0.1])
+                plt.axis("equal")
 
         plt.title("Distribution of Particles represented by their weights\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
             threshold, weights.shape[0]))
@@ -90,7 +101,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, kde=False, 
         if plot_particles:
             for epoch, threshold in enumerate(sampler.thresholds):
                 _plot_thetas(sampler.particles[epoch], threshold)
-                _plot_particles(sampler.particles[epoch], sampler.weights[epoch], threshold)
+                _plot_particles(sampler.particles[epoch], sampler.weights[epoch], threshold, as_circle)
         else:
             _plot_thetas(sampler.Thetas, sampler.thresholds[-1])
 
