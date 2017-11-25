@@ -68,7 +68,7 @@ class SMCSampler(BaseSampler):
 
         prior_mean = prior_mean / len(self._priors)
         kernel = ss.multivariate_normal(curr_theta, sigma, allow_singular=True).pdf
-        weight = prior_mean / np.sum(ws * kernel(prev_thetas))
+        weight = prior_mean / np.dot(ws, kernel(prev_thetas))
 
         return weight
 
