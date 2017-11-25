@@ -26,6 +26,10 @@ class SMCSampler(BaseSampler):
     def particles(self):
         return self._particles
 
+    @property
+    def weights(self):
+        return self._weights
+
 
     def __init__(self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None):
 
@@ -139,6 +143,7 @@ class SMCSampler(BaseSampler):
         self._nr_iter = nr_iter
         self._acceptance_rate = nr_samples / self.nr_iter
         self._particles = thetas
+        self._weights = weights
         self._Thetas = thetas[T-1,:,:]
         self._distances = distances
 

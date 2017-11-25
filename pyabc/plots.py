@@ -15,25 +15,25 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, kde=False, 
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
-    def _plot_thetas(particles, threshold):
+    def _plot_thetas(thetas, threshold):
         nonlocal sampler, kde, nr_rows, names, kwargs
 
         fig = plt.figure()
 
         # plot thetas of last iteration
-        for plot_id, thetas in enumerate(particles.T):
+        for plot_id, theta in enumerate(thetas.T):
             plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id + 1)
 
             # plot posterior
-            plt.hist(thetas, edgecolor="k", bins='auto', normed=True, alpha=0.4)
+            plt.hist(theta, edgecolor="k", bins='auto', normed=True, alpha=0.4)
             # plot mean
-            plt.axvline(np.mean(thetas), linewidth=1.2, color="m", linestyle="--", label="mean")
+            plt.axvline(np.mean(theta), linewidth=1.2, color="m", linestyle="--", label="mean")
             # plot MAP
             if kde:
                 # get the bandwidth method argument for scipy
                 # and run scipy's kde
-                kde = ss.kde.gaussian_kde(thetas, bw_method=kwargs.get('bw_method'))
-                xx = np.linspace(np.min(thetas) - 0.1, np.max(thetas) + 0.1, 200)
+                kde = ss.kde.gaussian_kde(theta, bw_method=kwargs.get('bw_method'))
+                xx = np.linspace(np.min(theta) - 0.1, np.max(thetas) + 0.1, 200)
                 dens = kde(xx)
                 plt.plot(xx, dens)
                 plt.axvline(xx[np.argmax(dens)], linewidth=1.2, color="m", linestyle=":", label="MAP")
@@ -46,6 +46,33 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, kde=False, 
             threshold,
             sampler.Thetas.shape[0]
         ), y=0.96)
+
+        plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
+        plt.show()
+
+    def _plot_particles(particles, weights, threshold):
+        nonlocal sampler, kde, nr_rows, names, kwargs
+
+        #norm weights
+        if weights.max() != weights.min():
+            weights = np.divide(weights - weights.min(), weights.max() - weights.min()) / 100
+
+        for plot_id, theta in enumerate(particles.T):
+
+            fig = plt.figure()
+
+            # draw for each theta a circle with radius equal to its weight
+            for i, x in enumerate(theta):
+                circle = plt.Circle((x, 0), radius=weights[i], alpha=0.4)
+                plt.gca().add_patch(circle)
+
+            plt.xlabel(names[plot_id])
+            plt.xlim([particles.min() - 0.1, particles.max() + 0.1])
+            plt.ylim([-weights.max(), weights.max()])
+            plt.axis("equal")
+
+        plt.title("Distribution of Particles represented by their weights\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
+            threshold, weights.shape[0]))
 
         plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
         plt.show()
@@ -63,6 +90,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, kde=False, 
         if plot_particles:
             for epoch, threshold in enumerate(sampler.thresholds):
                 _plot_thetas(sampler.particles[epoch], threshold)
+                _plot_particles(sampler.particles[epoch], sampler.weights[epoch], threshold)
         else:
             _plot_thetas(sampler.Thetas, sampler.thresholds[-1])
 
