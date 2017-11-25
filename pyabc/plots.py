@@ -16,7 +16,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, as_circle=T
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
-    def _plot_thetas(thetas, threshold):
+    def _plot_thetas(thetas, threshold, xlim=None):
         nonlocal sampler, kde, nr_rows, names, kwargs
 
         fig = plt.figure()
@@ -40,6 +40,8 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, as_circle=T
                 plt.axvline(xx[np.argmax(dens)], linewidth=1.2, color="m", linestyle=":", label="MAP")
 
             # label of axis
+            if xlim:
+                plt.xlim(xlim)
             plt.xlabel(names[plot_id])
             plt.legend(loc="upper right")
 
@@ -51,7 +53,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, as_circle=T
         plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
         plt.show()
 
-    def _plot_particles(particles, weights, threshold, as_circle=True):
+    def _plot_particles(particles, weights, threshold, xlim=None, as_circle=True):
         nonlocal sampler, kde, nr_rows, names, kwargs
 
         #norm weights
@@ -79,8 +81,8 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, as_circle=T
                 plt.ylabel("weight $w_{{i,t}}$")
 
                 plt.xlabel(names[plot_id])
-                plt.xlim([particles.min() - 0.1, particles.max() + 0.1])
-                plt.axis("equal")
+                if xlim:
+                    plt.xlim(xlim)
 
         plt.title("Distribution of Particles represented by their weights\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
             threshold, weights.shape[0]))
@@ -100,8 +102,9 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_particles=False, as_circle=T
     elif isinstance(sampler, pyabc.SMCSampler):
         if plot_particles:
             for epoch, threshold in enumerate(sampler.thresholds):
-                _plot_thetas(sampler.particles[epoch], threshold)
-                _plot_particles(sampler.particles[epoch], sampler.weights[epoch], threshold, as_circle)
+                xlim = (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
+                _plot_thetas(sampler.particles[epoch], threshold, xlim)
+                _plot_particles(sampler.particles[epoch], sampler.weights[epoch], threshold, xlim, as_circle)
         else:
             _plot_thetas(sampler.Thetas, sampler.thresholds[-1])
 
