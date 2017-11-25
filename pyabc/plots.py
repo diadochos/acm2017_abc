@@ -4,7 +4,6 @@ import scipy.stats as ss
 import pyabc
 
 PLOTS_PER_ROW = 3
-CIRCLE_MAX_RADIUS = 0.1
 
 def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=False, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
@@ -75,7 +74,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=False, **kwar
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
 
-def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True):
+def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True, **kwargs):
     """take a sampler and plot the particles for each iteration as vertical circle plot
 
     :param sampler: instance of BaseSampler
@@ -90,7 +89,10 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True)
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
     nr_epochs, nr_samples, nr_thetas = sampler.particles.shape
+    delta_max_y = sampler.particles[0].max() - sampler.particles[0].min()
+    CIRCLE_MAX_RADIUS = delta_max_y / 50
     y_lim = (sampler.particles[0].min() - 2 * CIRCLE_MAX_RADIUS, sampler.particles[0].max() + 2 * CIRCLE_MAX_RADIUS)
+
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
@@ -108,8 +110,8 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True)
 
             # norm weights
             if weights.max() != weights.min():
-                weights = np.sqrt(np.divide(weights - weights.min(),
-                                    weights.max() - weights.min()))
+                weights = np.divide(weights - weights.min(),
+                                    weights.max() - weights.min())
             else:
                 weights = np.sqrt(weights / weights[0])
 
@@ -117,7 +119,7 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True)
             weights *= CIRCLE_MAX_RADIUS
 
             yy = (sampler.particles[epoch].T)[param_id]
-            delta_x = CIRCLE_MAX_RADIUS + epoch * 3 * CIRCLE_MAX_RADIUS
+            delta_x = CIRCLE_MAX_RADIUS + epoch * 10 * CIRCLE_MAX_RADIUS
             xticks.append(delta_x)
 
             # draw for each theta a circle with radius equal to its weight
@@ -127,12 +129,12 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True)
                         (delta_x, y),
                         radius=weights[i],
                         facecolor="C{}".format(epoch),
-                        alpha=0.4
+                        alpha=kwargs.get("alpha")
                     )
                     plt.gca().add_patch(circle)
 
             else:
-                plt.plot(np.repeat(delta_x, nr_samples), yy, "o", alpha=0.05)
+                plt.plot(np.repeat(delta_x, nr_samples), yy, "o", alpha=kwargs.get("alpha"))
 
             # plot mean
             if epoch == 0:
