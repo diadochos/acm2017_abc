@@ -30,6 +30,20 @@ class SMCSampler(BaseSampler):
     def weights(self):
         return self._weights
 
+    @property
+    def threshold(self):
+        return self._threshold
+
+    @threshold.setter
+    def threshold(self, threshold):
+        if isinstance(threshold, (int, float)):
+            if threshold > 0 or np.isclose(threshold, 0):
+                self._threshold = threshold
+            else:
+                raise ValueError("Passed argument {} must not be negative".format(threshold))
+        else:
+            raise TypeError("Passed argument {} has to be and integer or float.".format(threshold))
+
 
     def __init__(self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None):
 
@@ -52,6 +66,7 @@ class SMCSampler(BaseSampler):
             raise ValueError("There must be at least one threshold value.")
 
         self._thresholds = thresholds
+        self._threshold = thresholds[-1]
         print("SMC sampler started with thresholds: {} and number of samples: {}".format(self.thresholds, nr_samples))
         self._reset()
         self._run_PMC_sampling(nr_samples)
@@ -136,7 +151,7 @@ class SMCSampler(BaseSampler):
                             # heigh weights mean, theta* is far from old thetas
                             # we want the close ones, so we have to invert the weights
                             # so that small weights become the large ones
-                            weights[t,i] = 1 / self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
+                            weights[t,i] = self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
                             break
 
             print('Iteration', t , 'completed')

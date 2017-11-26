@@ -58,18 +58,15 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=False, **kwar
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
-    if isinstance(sampler, pyabc.RejectionSampler):
+    if isinstance(sampler, (pyabc.RejectionSampler,pyabc.MCMCSampler, pyabc.SMCSampler)):
 
         _plot_thetas(sampler.Thetas, sampler.threshold)
 
-    elif isinstance(sampler, pyabc.SMCSampler):
+    elif isinstance(sampler, pyabc.SMCSampler) & plot_all:
         if plot_all:
             for epoch, threshold in enumerate(sampler.thresholds):
                 xlim = (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
                 _plot_thetas(sampler.particles[epoch], threshold, xlim)
-        else:
-            _plot_thetas(sampler.Thetas, sampler.thresholds[-1])
-
     else:
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
