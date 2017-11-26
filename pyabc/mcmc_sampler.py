@@ -83,18 +83,37 @@ class MCMCSampler(BaseSampler):
 	                verbosity = 0
 	            )
 
-    	rej_samp.sample(threshold=self.threshold, nr_samples=1, batch_size=10)
+    	#get the best from 10 samples to initialize the chain 
+    	rej_samp.sample(threshold=self.threshold, nr_samples=10, batch_size=10)
+
+    	best_p = -float("inf")
+    	best_idx = 0 
+
+    	for i in range(10):
+    		p = np.sum(self.prior_pdfs(rej_samp.Thetas[i,:], num_priors)) 
+
+    		if p > best_p:
+    			best_p = p 
+    			best_idx = i
+
     	nr_iter += rej_samp.nr_iter
 
-    	thetas[0,:] = rej_samp.Thetas[0]
-    	distances[0] = rej_samp.distances[0]
-    	step_size = 1.0 * np.identity(num_priors)
+    	thetas[0,:] = rej_samp.Thetas[best_idx,:]
+    	distances[0] = rej_samp.distances[best_idx]
+
+    	step = np.zeros((num_priors, num_priors), float)
+    	np.fill_diagonal(step, step_size)
 
     	for i in range(1,nr_samples):
    			while True:
+   				nr_iter += 1 
    				theta = thetas[i-1,:]
-   				thetap = np.random.multivariate_normal(theta, np.atleast_2d(step_size))
-   				
+   				thetap = np.random.multivariate_normal(theta, np.atleast_2d(step))
+   	
+   				# for which theta pertubation produced unreasonable values?
+   				for id, prior in enumerate(self.priors):
+   					if prior.pdf(thetap[id]) == 0:
+   						thetap[id] = theta[id]
 
    				Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
    				stats_y = normalize_vector(flatten_function(self.summaries, Y))
@@ -107,13 +126,15 @@ class MCMCSampler(BaseSampler):
    					u = np.random.uniform(0,1)
 
    					if u < A: 
+   						#print("accepted proposed theta")
    						thetas[i,:] = thetap
    						distances[i] = d 
    					else: 
+   						#print("accepted previous theta")
    						thetas[i,:] = theta
    						distances[i] = distances[i-1]
-   					
    					break
+   			#step_size = np.cov(thetas[0:i+1,:].T)
    		
 
     	self._runtime = time.clock() - start
