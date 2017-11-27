@@ -63,6 +63,8 @@ class BOLFI(BaseSampler):
         # summary statistics of the observed data
         stats_x = normalize_vector(flatten_function(self.summaries, self.observation))
 
+        fill_up, rest = divmod(nr_samples, n_chains)
+
         # define distance function
         f = lambda thetas: self.distance(stats_x, normalize_vector(flatten_function(self.summaries, self.simulator(*thetas.flatten()))))
 
@@ -111,7 +113,7 @@ class BOLFI(BaseSampler):
         if kwargs.get("N"):
             N = kwargs.get("N")
         else:
-            N = 1000
+            N = fill_up if fill_up > 1000 else 1000
         sampler.run_mcmc(pos, N)
 
         self._runtime = time.clock() - start
@@ -122,7 +124,6 @@ class BOLFI(BaseSampler):
         # fill thetas equally with samples from all chains
         thetas = np.zeros((nr_samples, len(self.priors)))
         chain = sampler.chain
-        fill_up, rest = divmod(nr_samples, n_chains)
 
         for i in range(n_chains):
             # take from each chain the last fill_up samples
