@@ -68,7 +68,7 @@ class SMCSampler(BaseSampler):
 
         print("SMC sampler started with thresholds: {} and number of samples: {}".format(self.thresholds, nr_samples))
         self._reset()
-        self._run_BOLFI_sampling(nr_samples)
+        self._run_PMC_sampling(nr_samples)
 
         if self.verbosity == 1:
             print("Samples: %6d - Thresholds: %.2f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.thresholds[-1], self.nr_iter, self.acceptance_rate, self.runtime))

@@ -82,8 +82,10 @@ class Prior():
             # if the scipy distribution does not exist
             raise ValueError('"{}" is not a valid scipy distribution.'.format(scipy_dist))
 
+
     def multivariate(self):
         return isinstance(self.distribution, ss._multivariate.multi_rv_frozen)
+
 
     def __len__(self):
         if self.multivariate():
@@ -98,6 +100,7 @@ class Prior():
 
     def pdf(self, theta):
         return self.distribution.pdf(theta)
+
 
     def logpdf(self, theta):
         return self.distribution.logpdf(theta)
