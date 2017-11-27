@@ -117,7 +117,7 @@ class RejectionSampler(BaseSampler):
         self._run_rejection_sampling(nr_samples, batch_size)
 
         if self.verbosity == 1:
-            print("Samples: %6d - Threshold: %.2f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
+            print("Samples: %6d - Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
 
 
     def __str__(self):
