@@ -97,16 +97,16 @@ class BOLFI(BaseSampler):
             # eqn 47 from BOLFI paper
             m, s = optim.model.predict(theta)
             # F = gaussian cdf, see eqn 28 in BOLFI paper
-            return ss.norm.logcdf((h - m) / s)
+            return ss.norm.logcdf((h - m) / s).flatten()
 
         logposterior = lambda theta: loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
 
         #setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function that returns the natural logarithm of the posterior propability
-        sampler = emcee.EnsembleSampler(n_chains, 1, logposterior)
+        sampler = emcee.EnsembleSampler(n_chains, len(self.priors), logposterior)
 
         # begin mcmc with an exploration phase and store end pos for second run
         p0 = self.priors.sample(n_chains)
-        pos, prob, state = sampler.run_mcmc(p0, burn_in)
+        pos = sampler.run_mcmc(p0, burn_in)[0]
         sampler.reset()
         if kwargs.get("N"):
             N = kwargs.get("N")
