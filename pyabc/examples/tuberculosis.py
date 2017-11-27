@@ -17,7 +17,7 @@ class Tuberculosis(Example):
         return [nr_mutations, max_cluster, nr_transmissions]
 
 
-    def simulator(self, alpha, delta, tau):
+    def simulator(self, alpha, tau, delta=0):
         m = 20
         infected_hosts = np.array([[1]]) # list of haplotypes holding infectious hosts, we always start with one infected patient
         limit_exceeded = False
