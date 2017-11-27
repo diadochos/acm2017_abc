@@ -1,29 +1,19 @@
-import pyabc
 import numpy as np
-from pyabc.utils import plot_marginals
+import sys, os
+sys.path.append(os.path.abspath(os.path.join('..')))
+from pyabc import BOLFI, Prior
+import emcee
+import scipy.stats as ss
 import matplotlib.pyplot as plt
+from pyabc.plots import plot_marginals
 
-# multivaraite test
-mu = np.array([1,2])
-sigma = np.diag([1,1])
+mu0 = 2.5
+y0 = np.random.normal(mu0, 1, 2)
 
-y0 = np.random.multivariate_normal(mu, sigma, 10)
+prior = Prior('uniform', 0, 5)
 
-# prior_mu = pyabc.Prior('multivariate_normal', np.array([0,0]), np.diag([1,1]))
+def simulator(mu):
+    return np.random.normal(mu, 1, 2)
 
-p1 = pyabc.Prior('normal', 0, 1)
-p2 = pyabc.Prior('normal', 0, 1)
-
-def simulator(mu1, mu2):
-    return np.random.multivariate_normal(np.array([mu1, mu2]), sigma, 10)
-
-def mean(x):
-    return np.mean(x, 0)
-
-def var(x):
-    return np.cov(x.T)
-
-rej_samp = pyabc.RejectionSampler(priors=[p1, p2], simulator=simulator, summaries=[mean, var], observation=y0)
-
-rej_samp.sample(0.5, 1000, batch_size=1000)
-plot_marginals(rej_samp, kde=True)
+bolfi = BOLFI(priors=[prior], simulator=simulator, observation=y0, summaries=[np.mean], domain=[(0, 5)])
+thetas = bolfi.sample(nr_samples=2000, n_chains=6)

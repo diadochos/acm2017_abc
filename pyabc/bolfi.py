@@ -1,5 +1,5 @@
 from .sampler import BaseSampler
-from .utils import flatten_function
+from .utils import flatten_function, normalize_vector
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -7,12 +7,17 @@ with warnings.catch_warnings():
 import numpy as np
 import scipy.stats as ss
 import emcee
+import time
 
 class BOLFI(BaseSampler):
 
     @property
     def domain(self):
         return self._domain
+
+    @property
+    def bolfi(self):
+        return self._bolfi
 
     @domain.setter
     def domain(self, domain):
@@ -31,13 +36,41 @@ class BOLFI(BaseSampler):
 
         self.domain = domain
 
-    def sample(self, threshold):
+    def sample(self, nr_samples, n_chains, burn_in=100, **kwargs):
+        """
 
+        :param threshold:
+        :param nr_samples:
+        :param n_steps:
+        :param burn_in:
+        :param kwargs:
+        :return:
+        """
+        if n_chains > nr_samples:
+            raise ValueError("number of chains has to be smaller than number of samples")
+
+        self.threshold = None
+
+        print("BOLFI sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
+        self._reset()
+        self._run_BOLFI_sampling(nr_samples, n_chains, burn_in, **kwargs)
+
+        if self.verbosity == 1:
+            print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
+
+
+    def _run_BOLFI_sampling(self, nr_samples, n_chains, burn_in, **kwargs):
         # summary statistics of the observed data
-        stats_x = flatten_function(self.summaries, self.observation)
+        stats_x = normalize_vector(flatten_function(self.summaries, self.observation))
 
         # define distance function
-        f = lambda thetas: self.distance(stats_x, flatten_function(self.summaries, self.simulator(*thetas)))
+        f = lambda thetas: self.distance(stats_x, normalize_vector(flatten_function(self.summaries, self.simulator(*thetas))))
+
+        # initialize the loop
+        accepted_thetas = []
+        distances = []
+
+        start = time.clock()
 
         # create initial evidence set
         # evidence_theta = self.priors.sample(10)
@@ -46,7 +79,7 @@ class BOLFI(BaseSampler):
         bounds = [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in zip(self.priors, self.domain)]
 
 
-        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
+        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='LCB',
                                      exact_feval=True, model_type='GP',
                                      num_cores=-1, initial_design_numdata=10,
                                      initial_design_type='sobol')
@@ -58,6 +91,7 @@ class BOLFI(BaseSampler):
         print("Starting Bayesian Optimization")
 
         optim.run_optimization(max_iter, max_time, eps)
+        self._bolfi = optim
 
         def loglikelihood(theta, h=0.5):
             # eqn 47 from BOLFI paper
@@ -67,14 +101,40 @@ class BOLFI(BaseSampler):
 
         logposterior = lambda theta: loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
 
-        sampler = emcee.EnsembleSampler(100, 1, logposterior)
-        sampler.run_mcmc(self.priors.sample(100), 1000)
+        #setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function that returns the natural logarithm of the posterior propability
+        sampler = emcee.EnsembleSampler(n_chains, 1, logposterior)
 
-        return sampler.flatchain
+        # begin mcmc with an exploration phase and store end pos for second run
+        p0 = self.priors.sample(n_chains)
+        pos, prob, state = sampler.run_mcmc(p0, burn_in)
+        sampler.reset()
+        if kwargs.get("N"):
+            N = kwargs.get("N")
+        else:
+            N = 1000
+        sampler.run_mcmc(pos, N)
 
+        self._runtime = time.clock() - start
 
+        self._nr_iter = n_chains * N
+        self._acceptance_rate = np.mean(sampler.acceptance_fraction)
 
+        # fill thetas equally with samples from all chains
+        thetas = np.zeros((nr_samples, len(self.priors)))
+        chain = sampler.chain
+        fill_up, rest = divmod(nr_samples, n_chains)
 
+        for i in range(n_chains):
+            # take from each chain the last fill_up samples
+            thetas[i * fill_up:(i * fill_up + fill_up)] = chain[i,(-fill_up):,:]
+
+        if rest > 0:
+            thetas[fill_up * n_chains:] = np.random.choice(sampler.flatchain.flatten(), rest).reshape(rest, len(self.priors))
+
+        self._Thetas = thetas
+        #self._distances = distances[:nr_samples]
+
+        return thetas
 
 
     def _reset(self):

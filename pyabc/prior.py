@@ -39,6 +39,7 @@ class Prior():
 
         self._name = name
 
+
     def __init__(self, scipy_dist, *args, name=None):
         """Initialize the scipy and numpy objects.
 
