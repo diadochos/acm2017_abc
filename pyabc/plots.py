@@ -5,7 +5,7 @@ import pyabc
 
 PLOTS_PER_ROW = 3
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=False, **kwargs):
+def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
@@ -58,15 +58,14 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=False, **kwar
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
-    if isinstance(sampler, (pyabc.RejectionSampler,pyabc.MCMCSampler, pyabc.SMCSampler)):
+    if isinstance(sampler, pyabc.BaseSampler):
 
         _plot_thetas(sampler.Thetas, sampler.threshold)
 
     elif isinstance(sampler, pyabc.SMCSampler) & plot_all:
-        if plot_all:
-            for epoch, threshold in enumerate(sampler.thresholds):
-                xlim = (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
-                _plot_thetas(sampler.particles[epoch], threshold, xlim)
+        for epoch, threshold in enumerate(sampler.thresholds):
+            xlim = (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
+            _plot_thetas(sampler.particles[epoch], threshold, xlim)
     else:
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
