@@ -64,7 +64,7 @@ class BOLFI(BaseSampler):
         stats_x = normalize_vector(flatten_function(self.summaries, self.observation))
 
         # define distance function
-        f = lambda thetas: self.distance(stats_x, normalize_vector(flatten_function(self.summaries, self.simulator(*thetas))))
+        f = lambda thetas: self.distance(stats_x, normalize_vector(flatten_function(self.summaries, self.simulator(*thetas.flatten()))))
 
         # initialize the loop
         accepted_thetas = []
@@ -79,7 +79,7 @@ class BOLFI(BaseSampler):
         bounds = [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in zip(self.priors, self.domain)]
 
 
-        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='LCB',
+        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
                                      exact_feval=True, model_type='GP',
                                      num_cores=-1, initial_design_numdata=10,
                                      initial_design_type='sobol')

@@ -71,7 +71,7 @@ class SMCSampler(BaseSampler):
         self._run_PMC_sampling(nr_samples)
 
         if self.verbosity == 1:
-            print("Samples: %6d - Thresholds: %.2f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.thresholds[-1], self.nr_iter, self.acceptance_rate, self.runtime))
+            print("Samples: %6d - Thresholds: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.thresholds[-1], self.nr_iter, self.acceptance_rate, self.runtime))
 
 
     def _calculate_weights(self, curr_theta, prev_thetas, ws, sigma):
