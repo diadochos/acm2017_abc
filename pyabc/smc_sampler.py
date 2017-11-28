@@ -1,6 +1,6 @@
 from .sampler import BaseSampler
 from .rejection_sampler import RejectionSampler
-from .utils import flatten_function, normalize_vector
+from .utils import flatten_function
 
 import scipy.stats as ss
 import matplotlib.pyplot as plt
@@ -122,7 +122,8 @@ class SMCSampler(BaseSampler):
                 weights[t,:] = np.ones(nr_samples) / nr_samples
                 sigma[t,:,:] = 2*np.cov(thetas[t,:,:].T)
             else:
-                print('starting iteration[', t,']')
+                if self.verbosity:
+                    print('starting iteration[', t,']')
                 for i in range(0, nr_samples):
                     while (True):
                         nr_iter += 1
@@ -153,7 +154,8 @@ class SMCSampler(BaseSampler):
                             weights[t,i] = 1 / self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
                             break
 
-            print('Iteration', t , 'completed')
+            if self.verbosity:
+                print('Iteration', t , 'completed')
             weights[t,:] = weights[t,:] / sum(weights[t,:])
             sigma[t,:,:] = 2 * np.cov(thetas[t,:,:].T,aweights=weights[t,:])
 

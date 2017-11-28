@@ -1,6 +1,6 @@
 from .sampler import BaseSampler
 from .rejection_sampler import RejectionSampler
-from .utils import flatten_function, normalize_vector
+from .utils import flatten_function
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -70,7 +70,7 @@ class MCMCSampler(BaseSampler):
             summaries=self.summaries,
             distance=self.distance,
             observation=self.observation,
-            verbosity = 0
+            verbosity=0
         )
 
         #get the best from 10 samples to initialize the chain
@@ -140,14 +140,15 @@ class MCMCSampler(BaseSampler):
         if len(step_size) != len(self.priors):
           raise ValueError('Step size for every prior is required')
 
-        print("MCMC sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
+        if self.verbosity:
+            print("MCMC sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
 
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
         self._run_mcmc_sampling(nr_samples, step_size)
 
-        if self.verbosity == 1:
+        if self.verbosity:
             print("Samples: %6d - Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
 
 
