@@ -1,5 +1,5 @@
 from .sampler import BaseSampler
-from .utils import flatten_function, normalize_vector
+from .utils import flatten_function
 import matplotlib.pyplot as plt
 import numpy as np
 import time

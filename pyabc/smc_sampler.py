@@ -1,6 +1,6 @@
 from .sampler import BaseSampler
 from .rejection_sampler import RejectionSampler
-from .utils import flatten_function, normalize_vector
+from .utils import flatten_function
 
 import scipy.stats as ss
 import matplotlib.pyplot as plt
