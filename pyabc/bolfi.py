@@ -36,7 +36,7 @@ class BOLFI(BaseSampler):
 
         self.domain = domain
 
-    def sample(self, nr_samples, n_chains, burn_in=100, **kwargs):
+    def sample(self, nr_samples, threshold, n_chains=1, burn_in=100, **kwargs):
         """
 
         :param threshold:
@@ -49,7 +49,7 @@ class BOLFI(BaseSampler):
         if n_chains > nr_samples:
             raise ValueError("number of chains has to be smaller than number of samples")
 
-        self.threshold = None
+        self.threshold = threshold
 
         print("BOLFI sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
         self._reset()
@@ -99,7 +99,7 @@ class BOLFI(BaseSampler):
             # eqn 47 from BOLFI paper
             m, s = optim.model.predict(theta)
             # F = gaussian cdf, see eqn 28 in BOLFI paper
-            return ss.norm.logcdf((h - m) / s).flatten()
+            return ss.norm.logcdf((self.threshold - m) / s).flatten()
 
         logposterior = lambda theta: loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
 
@@ -110,10 +110,7 @@ class BOLFI(BaseSampler):
         p0 = self.priors.sample(n_chains)
         pos = sampler.run_mcmc(p0, burn_in)[0]
         sampler.reset()
-        if kwargs.get("N"):
-            N = kwargs.get("N")
-        else:
-            N = fill_up if fill_up > 1000 else 1000
+        N = divmod(nr_samples, n_chains)[0] + 1
         sampler.run_mcmc(pos, N)
 
         self._runtime = time.clock() - start
@@ -122,15 +119,7 @@ class BOLFI(BaseSampler):
         self._acceptance_rate = np.mean(sampler.acceptance_fraction)
 
         # fill thetas equally with samples from all chains
-        thetas = np.zeros((nr_samples, len(self.priors)))
-        chain = sampler.chain
-
-        for i in range(n_chains):
-            # take from each chain the last fill_up samples
-            thetas[i * fill_up:(i * fill_up + fill_up)] = chain[i,(-fill_up):,:]
-
-        if rest > 0:
-            thetas[fill_up * n_chains:] = np.random.choice(sampler.flatchain.flatten(), rest).reshape(rest, len(self.priors))
+        thetas = sampler.flatchain[:nr_samples]
 
         self._Thetas = thetas
         #self._distances = distances[:nr_samples]
