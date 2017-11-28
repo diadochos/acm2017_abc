@@ -76,21 +76,8 @@ class MCMCSampler(BaseSampler):
         #get the best from 10 samples to initialize the chain
         rej_samp.sample(threshold=self.threshold, nr_samples=10, batch_size=10)
 
-        best_p = -float("inf")
-        best_idx = 0
-
-        # TODO: use Theta with minimum distance instead of maximum probability
-        for i in range(10):
-            p = self.priors.pdf(rej_samp.Thetas[i,:])
-
-            if p > best_p:
-                best_p = p
-                best_idx = i
-
-        nr_iter += rej_samp.nr_iter
-
-        thetas[0,:] = rej_samp.Thetas[best_idx,:]
-        distances[0] = rej_samp.distances[best_idx]
+        thetas[0] = rej_samp.Thetas[np.argmin(rej_samp.distances)]
+        distances[0] = np.min(rej_samp.distances)
 
         step = np.zeros((num_priors, num_priors), float)
         np.fill_diagonal(step, step_size)
@@ -113,7 +100,7 @@ class MCMCSampler(BaseSampler):
                d = self.distance(stats_x, stats_y)
 
                if d <= self.threshold:
-                   A = sum(self.prior_pdfs(thetap, num_priors)) / sum(self.prior_pdfs(theta,num_priors))
+                   A = self.priors.pdf(thetap) / self.priors.pdf(theta)
                    u = np.random.uniform(0,1)
 
                    if u < A:
