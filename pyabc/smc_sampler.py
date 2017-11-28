@@ -62,16 +62,16 @@ class SMCSampler(BaseSampler):
             Nothing
 
         """
+        if not thresholds:
+            raise ValueError("There must be at least one threshold value.")
 
-        self.thresholds = thresholds
-        self.threshold = thresholds[-1]
-
+        self._thresholds = thresholds
+        self._threshold = thresholds[-1]
         print("SMC sampler started with thresholds: {} and number of samples: {}".format(self.thresholds, nr_samples))
         self._reset()
         self._run_PMC_sampling(nr_samples)
-
         if self.verbosity == 1:
-            print("Samples: %6d - Thresholds: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.thresholds[-1], self.nr_iter, self.acceptance_rate, self.runtime))
+            print("Samples: %6d - Thresholds: %.2f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.thresholds[-1], self.nr_iter, self.acceptance_rate, self.runtime))
 
 
     def _calculate_weights(self, curr_theta, prev_thetas, ws, sigma):
@@ -82,7 +82,7 @@ class SMCSampler(BaseSampler):
             prior_mean += self._priors[i].pdf(curr_theta[i])
 
         prior_mean = prior_mean / len(self._priors)
-        kernel = ss.multivariate_normal(curr_theta, sigma, allow_singular=True).pdf
+        kernel = ss.multivariate_normal(curr_theta, sigma).pdf
         weight = prior_mean / np.dot(ws, kernel(prev_thetas))
 
         return weight
@@ -91,7 +91,7 @@ class SMCSampler(BaseSampler):
         T = len(self.thresholds)
         X = self.observation
 
-        list_of_stats_x = normalize_vector(flatten_function(self.summaries, X))
+        list_of_stats_x = flatten_function(self.summaries, X)
         num_priors = len(self.priors) # TODO: multivariate prior?
         nr_iter = 0
 
@@ -134,12 +134,12 @@ class SMCSampler(BaseSampler):
                         thetap = np.atleast_1d(ss.multivariate_normal(theta,sigma[t-1]).rvs())
 
                         # for which theta pertubation produced unreasonable values?
-                        for id, prior in enumerate(self.priors):
-                            if prior.pdf(thetap[id]) == 0:
-                                thetap[id] = theta[id]
+                        #for id, prior in enumerate(self.priors):
+                         #   if prior.pdf(thetap[id]) == 0:
+                          #      thetap[id] = theta[id]
 
                         Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
-                        list_of_stats_y = normalize_vector(flatten_function(self.summaries, Y))
+                        list_of_stats_y = flatten_function(self.summaries, Y)
                         # either use predefined distance function or user defined discrepancy function
                         d = self.distance(list_of_stats_x, list_of_stats_y)
 

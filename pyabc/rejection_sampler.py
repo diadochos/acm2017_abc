@@ -55,10 +55,10 @@ class RejectionSampler(BaseSampler):
 
         # observed data and their summary statistics
         X = self.observation
-        stats_x = normalize_vector(flatten_function(self.summaries, X))
+        stats_x = flatten_function(self.summaries, X)
 
         # convenience function to compute summaries of generated data
-        simulate_and_summarize = lambda thetas: normalize_vector(flatten_function(self.summaries, self.simulator(*thetas)))
+        simulate_and_summarize = lambda thetas: flatten_function(self.summaries, self.simulator(*thetas))
         compute_distance = lambda stats_y: self.distance(stats_x, stats_y)
 
         # initialize the loop
