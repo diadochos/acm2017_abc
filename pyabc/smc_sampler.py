@@ -138,6 +138,7 @@ class SMCSampler(BaseSampler):
                            if prior.pdf(thetap[id]) == 0:
                               thetap[id] = theta[id]
 
+
                         Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
                         list_of_stats_y = flatten_function(self.summaries, Y)
                         # either use predefined distance function or user defined discrepancy function
