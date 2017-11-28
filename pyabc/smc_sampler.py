@@ -107,7 +107,7 @@ class SMCSampler(BaseSampler):
             #init particles by using ABC Rejection Sampling with first treshold
             if t==0:
                 rej_samp = RejectionSampler(
-                    priors=self.priors,
+                    priors=self.priors.tolist(),
                     simulator=self.simulator,
                     summaries=self.summaries,
                     distance=self.distance,
@@ -152,7 +152,7 @@ class SMCSampler(BaseSampler):
                             # heigh weights mean, theta* is far from old thetas
                             # we want the close ones, so we have to invert the weights
                             # so that small weights become the large ones
-                            weights[t,i] = self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
+                            weights[t,i] = 1 / self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
                             break
 
             print('Iteration', t , 'completed')

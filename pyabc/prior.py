@@ -116,5 +116,8 @@ class PriorList(list):
     def logpdf(self, theta):
         return sum([p.logpdf(theta) for p in self])
 
+    def tolist(self):
+        return list(self)
+
     def __len__(self):
         return sum([len(p) for p in self])
