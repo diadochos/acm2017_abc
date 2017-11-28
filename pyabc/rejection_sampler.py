@@ -109,14 +109,15 @@ class RejectionSampler(BaseSampler):
         """
         self.threshold = threshold
 
-        print("Rejection sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
+        if self.verbosity:
+            print("Rejection sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
 
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
         self._run_rejection_sampling(nr_samples, batch_size)
 
-        if self.verbosity == 1:
+        if self.verbosity:
             print("Samples: %6d - Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
 
 
