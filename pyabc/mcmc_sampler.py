@@ -64,7 +64,7 @@ class MCMCSampler(BaseSampler):
 
     def _run_mcmc_sampling(self, nr_samples, step_size ):
     	X = self.observation
-    	stats_x = normalize_vector(flatten_function(self.summaries, X))
+    	stats_x = flatten_function(self.summaries, X)
     	num_priors = len(self.priors)
 
     	thetas = np.zeros((nr_samples, num_priors))
@@ -116,7 +116,7 @@ class MCMCSampler(BaseSampler):
    						thetap[id] = theta[id]
 
    				Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
-   				stats_y = normalize_vector(flatten_function(self.summaries, Y))
+   				stats_y = flatten_function(self.summaries, Y)
 
    				# either use predefined distance function or user defined discrepancy function
    				d = self.distance(stats_x, stats_y)
