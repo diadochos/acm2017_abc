@@ -133,10 +133,10 @@ class SMCSampler(BaseSampler):
                         theta = np.atleast_1d(thetas[t-1,idx,:])
                         thetap = np.atleast_1d(ss.multivariate_normal(theta,sigma[t-1]).rvs())
 
-                        # for which theta pertubation produced unreasonable values?
-                        #for id, prior in enumerate(self.priors):
-                         #   if prior.pdf(thetap[id]) == 0:
-                          #      thetap[id] = theta[id]
+                        #for which theta pertubation produced unreasonable values?
+                        for id, prior in enumerate(self.priors):
+                            if prior.pdf(thetap[id]) == 0:
+                                thetap[id] = theta[id]
 
                         Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
                         list_of_stats_y = flatten_function(self.summaries, Y)
