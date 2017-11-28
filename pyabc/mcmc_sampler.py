@@ -53,87 +53,87 @@ class MCMCSampler(BaseSampler):
 
 
     def _run_mcmc_sampling(self, nr_samples, step_size ):
-    	X = self.observation
-    	stats_x = flatten_function(self.summaries, X)
-    	num_priors = len(self.priors)
+        X = self.observation
+        stats_x = flatten_function(self.summaries, X)
+        num_priors = len(self.priors)
 
-    	thetas = np.zeros((nr_samples, num_priors))
-    	distances = np.zeros(nr_samples)
+        thetas = np.zeros((nr_samples, num_priors))
+        distances = np.zeros(nr_samples)
 
-    	nr_iter = 0
+        nr_iter = 0
 
-    	start = time.clock()
+        start = time.clock()
 
-    	rej_samp = RejectionSampler(
-	                priors=self.priors.tolist(),
-	                simulator=self.simulator,
-	                summaries=self.summaries,
-	                distance=self.distance,
-	                observation=self.observation,
-	                verbosity = 0
-	            )
+        rej_samp = RejectionSampler(
+            priors=self.priors.tolist(),
+            simulator=self.simulator,
+            summaries=self.summaries,
+            distance=self.distance,
+            observation=self.observation,
+            verbosity = 0
+        )
 
-    	#get the best from 10 samples to initialize the chain
-    	rej_samp.sample(threshold=self.threshold, nr_samples=10, batch_size=10)
+        #get the best from 10 samples to initialize the chain
+        rej_samp.sample(threshold=self.threshold, nr_samples=10, batch_size=10)
 
-    	best_p = -float("inf")
-    	best_idx = 0
+        best_p = -float("inf")
+        best_idx = 0
 
         # TODO: use Theta with minimum distance instead of maximum probability
-    	for i in range(10):
+        for i in range(10):
             p = self.priors.pdf(rej_samp.Thetas[i,:])
 
-    		if p > best_p:
-    			best_p = p
-    			best_idx = i
+            if p > best_p:
+                best_p = p
+                best_idx = i
 
-    	nr_iter += rej_samp.nr_iter
+        nr_iter += rej_samp.nr_iter
 
-    	thetas[0,:] = rej_samp.Thetas[best_idx,:]
-    	distances[0] = rej_samp.distances[best_idx]
+        thetas[0,:] = rej_samp.Thetas[best_idx,:]
+        distances[0] = rej_samp.distances[best_idx]
 
-    	step = np.zeros((num_priors, num_priors), float)
-    	np.fill_diagonal(step, step_size)
+        step = np.zeros((num_priors, num_priors), float)
+        np.fill_diagonal(step, step_size)
 
-    	for i in range(1,nr_samples):
-   			while True:
-   				nr_iter += 1
-   				theta = thetas[i-1,:]
-   				thetap = np.random.multivariate_normal(theta, np.atleast_2d(step))
+        for i in range(1,nr_samples):
+            while True:
+               nr_iter += 1
+               theta = thetas[i-1,:]
+               thetap = np.random.multivariate_normal(theta, np.atleast_2d(step))
 
-   				# for which theta pertubation produced unreasonable values?
-   				for id, prior in enumerate(self.priors):
-   					if prior.pdf(thetap[id]) == 0:
-   						thetap[id] = theta[id]
+               # for which theta pertubation produced unreasonable values?
+               for id, prior in enumerate(self.priors):
+                   if prior.pdf(thetap[id]) == 0:
+                       thetap[id] = theta[id]
 
-   				Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
-   				stats_y = flatten_function(self.summaries, Y)
+               Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
+               stats_y = flatten_function(self.summaries, Y)
 
-   				# either use predefined distance function or user defined discrepancy function
-   				d = self.distance(stats_x, stats_y)
+               # either use predefined distance function or user defined discrepancy function
+               d = self.distance(stats_x, stats_y)
 
-   				if d <= self.threshold:
-   					A = sum(self.prior_pdfs(thetap, num_priors)) / sum(self.prior_pdfs(theta,num_priors))
-   					u = np.random.uniform(0,1)
+               if d <= self.threshold:
+                   A = sum(self.prior_pdfs(thetap, num_priors)) / sum(self.prior_pdfs(theta,num_priors))
+                   u = np.random.uniform(0,1)
 
-   					if u < A:
-   						thetas[i,:] = thetap
-   						distances[i] = d
-   					else:
-   						thetas[i,:] = theta
-   						distances[i] = distances[i-1]
-   					break
-   			#step_size = np.cov(thetas[0:i+1,:].T)
-
-
-    	self._runtime = time.clock() - start
-    	self._nr_iter = nr_iter
-    	self._acceptance_rate = nr_samples / self.nr_iter
-    	self._Thetas = thetas
-    	self._distances = distances
+                   if u < A:
+                       thetas[i,:] = thetap
+                       distances[i] = d
+                   else:
+                       thetas[i,:] = theta
+                       distances[i] = distances[i-1]
+                   break
+               #step_size = np.cov(thetas[0:i+1,:].T)
 
 
-    	return thetas
+        self._runtime = time.clock() - start
+        self._nr_iter = nr_iter
+        self._acceptance_rate = nr_samples / self.nr_iter
+        self._Thetas = thetas
+        self._distances = distances
+
+
+        return thetas
 
 
     def sample(self, threshold, nr_samples, step_size):
