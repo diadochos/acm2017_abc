@@ -111,10 +111,11 @@ class PriorList(list):
         return np.vstack([p.sample(size) for p in self]).T
 
     def pdf(self, theta):
-        return np.prod([p.pdf(theta) for p in self])
+        return np.prod([p.pdf(theta[i]) for i, p in enumerate(self)])
 
     def logpdf(self, theta):
-        return sum([p.logpdf(theta) for p in self])
+        logpdf = np.sum([p.logpdf(theta[i]) for i, p in enumerate(self)])
+        return logpdf
 
     def tolist(self):
         return list(self)

@@ -78,10 +78,10 @@ class SMCSampler(BaseSampler):
 
         prior_mean = 0
 
-        prior_pdf = self.priors.pdf(curr_theta)
+        prior_pdf = self.priors.logpdf(curr_theta)
 
         kernel = ss.multivariate_normal(curr_theta, sigma).pdf
-        weight = prior_pdf / np.dot(ws, kernel(prev_thetas))
+        weight = np.exp(prior_pdf) / np.dot(ws, kernel(prev_thetas))
 
         return weight
 
@@ -151,7 +151,7 @@ class SMCSampler(BaseSampler):
                             # heigh weights mean, theta* is far from old thetas
                             # we want the close ones, so we have to invert the weights
                             # so that small weights become the large ones
-                            weights[t,i] = 1 / self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
+                            weights[t,i] = self._calculate_weights(thetas[t,i,:], thetas[t-1,:], weights[t-1,:], sigma[t-1])
                             break
 
             if self.verbosity:
