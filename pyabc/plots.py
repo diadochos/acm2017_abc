@@ -5,7 +5,7 @@ import pyabc
 
 PLOTS_PER_ROW = 3
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, **kwargs):
+def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=True, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
@@ -25,7 +25,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, **kwarg
             plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id + 1)
 
             # plot posterior
-            plt.hist(theta, edgecolor="k", bins='auto', normed=kwargs.get('normed'), alpha=0.4)
+            plt.hist(theta, edgecolor="k", bins='auto', normed=normed, alpha=0.4)
             # plot mean
             plt.axvline(np.mean(theta), linewidth=1.2, color="m", linestyle="--", label="mean")
             # plot MAP

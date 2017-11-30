@@ -107,18 +107,28 @@ class Prior():
 
 class PriorList(list):
 
+    def __init__(self, *args):
+        list.__init__(self, *args)
+        lens = self._lengths()
+        self._start_ix = np.cumsum(lens) - lens
+        self._end_ix = np.cumsum(lens)
+
     def sample(self, size):
         return np.vstack([p.sample(size) for p in self]).T
 
     def pdf(self, theta):
-        return np.prod([p.pdf(theta[i]) for i, p in enumerate(self)])
+        pdf = np.prod([p.pdf(theta[s:e]) for p,s,e in zip(self, self._start_ix, self._end_ix)])
+        return pdf
 
     def logpdf(self, theta):
-        logpdf = np.sum([p.logpdf(theta[i]) for i, p in enumerate(self)])
+        logpdf = np.sum([p.logpdf(theta[s:e]) for p,s,e in zip(self, self._start_ix, self._end_ix)])
         return logpdf
 
     def tolist(self):
         return list(self)
 
+    def _lengths(self):
+        return [len(p) for p in self]
+
     def __len__(self):
-        return sum([len(p) for p in self])
+        return sum(self._lengths())
