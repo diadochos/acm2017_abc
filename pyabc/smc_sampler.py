@@ -80,7 +80,7 @@ class SMCSampler(BaseSampler):
 
         prior_pdf = self.priors.logpdf(curr_theta)
 
-        kernel = ss.multivariate_normal(curr_theta, sigma).pdf
+        kernel = ss.multivariate_normal(curr_theta, sigma, allow_singular = True).pdf
         weight = np.exp(prior_pdf) / np.dot(ws, kernel(prev_thetas))
 
         return weight
@@ -130,7 +130,7 @@ class SMCSampler(BaseSampler):
                         #sample from the previous iteration, with weights and perturb the sample
                         idx = np.random.choice(np.arange(nr_samples), p=weights[t-1,:])
                         theta = np.atleast_1d(thetas[t-1,idx,:])
-                        thetap = np.atleast_1d(ss.multivariate_normal(theta,sigma[t-1]).rvs())
+                        thetap = np.atleast_1d(ss.multivariate_normal(theta,sigma[t-1], allow_singular = True).rvs())
 
                         # for which theta pertubation produced unreasonable values?
                         for id, prior in enumerate(self.priors):
