@@ -33,4 +33,4 @@ bolfi = pyabc.BOLFI(
     domain=domain
 )
 
-bolfi.sample(nr_samples=10000, n_chains=10)
+bolfi.sample(nr_samples=10000, threshold=0.1, n_chains=10)

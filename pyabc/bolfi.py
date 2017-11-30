@@ -36,7 +36,7 @@ class BOLFI(BaseSampler):
 
         self.domain = domain
 
-    def sample(self, nr_samples, threshold, n_chains=1, burn_in=100, **kwargs):
+    def sample(self, nr_samples, threshold, n_chains=2, burn_in=100, **kwargs):
         """
 
         :param threshold:
