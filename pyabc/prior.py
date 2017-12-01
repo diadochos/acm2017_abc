@@ -1,5 +1,4 @@
-from .utils import scipy_from_str, numpy_sampler_from_str
-from functools import partial
+from .utils import scipy_from_str, numpy_sampler_from_str, numgrad
 import scipy.stats as ss
 import numpy as np
 
@@ -29,7 +28,6 @@ class Prior():
         else:
             return self._name
 
-
     @name.setter
     def name(self, name):
         if name is None:
@@ -38,7 +36,6 @@ class Prior():
             raise TypeError("Passed argument {} has to be str.".format(name))
 
         self._name = name
-
 
     def __init__(self, scipy_dist, *args, name=None):
         """Initialize the scipy and numpy objects.
@@ -82,10 +79,8 @@ class Prior():
             # if the scipy distribution does not exist
             raise ValueError('"{}" is not a valid scipy distribution.'.format(scipy_dist))
 
-
     def multivariate(self):
         return isinstance(self.distribution, ss._multivariate.multi_rv_frozen)
-
 
     def __len__(self):
         if self.multivariate():
@@ -93,19 +88,18 @@ class Prior():
         else:
             return 1
 
-
     def sample(self, size=None):
         return self._sample(size)
-
 
     def pdf(self, theta):
         return self.distribution.pdf(theta)
 
-
     def logpdf(self, theta):
         return self.distribution.logpdf(theta)
 
+
 class PriorList(list):
+    # TODO implement pdf and logpdf for batches, which would improve numerical diff performance
 
     def __init__(self, *args):
         list.__init__(self, *args)
@@ -117,11 +111,13 @@ class PriorList(list):
         return np.vstack([p.sample(size) for p in self]).T
 
     def pdf(self, theta):
-        pdf = np.prod([p.pdf(theta[s:e]) for p,s,e in zip(self, self._start_ix, self._end_ix)])
+        pdf = np.prod([p.pdf(theta[s]) if e - s == 1 else p.pdf(theta[s:e]) for p, s, e in
+                       zip(self, self._start_ix, self._end_ix)])
         return pdf
 
     def logpdf(self, theta):
-        logpdf = np.sum([p.logpdf(theta[s:e]) for p,s,e in zip(self, self._start_ix, self._end_ix)])
+        logpdf = np.sum([p.logpdf(theta[s]) if e - s == 1 else p.logpdf(theta[s:e]) for p, s, e in
+                         zip(self, self._start_ix, self._end_ix)])
         return logpdf
 
     def tolist(self):
