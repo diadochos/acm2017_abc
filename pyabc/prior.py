@@ -65,12 +65,11 @@ class Prior():
             except:
                 sampler = self.distribution.rvs
 
-            # if the prior is multivariate, the samples need to be returned
-            # in a transposed format for the rejection sampler to work
+            # if the prior is 1d, return a (size, 1) array
             if self.multivariate():
-                self._sample = lambda s: sampler(size=s).T
-            else:
                 self._sample = sampler
+            else:
+                self._sample = lambda s: sampler(size=(s,1)) if s else sampler()
 
         except TypeError:
             # if arguments do not fit the scipy distribution
@@ -107,17 +106,29 @@ class PriorList(list):
         self._start_ix = np.cumsum(lens) - lens
         self._end_ix = np.cumsum(lens)
 
-    def sample(self, size):
-        return np.vstack([p.sample(size) for p in self]).T
+    def sample(self, size=None):
+        return np.hstack([p.sample(size) for p in self])
 
     def pdf(self, theta):
-        pdf = np.prod([p.pdf(theta[s]) if e - s == 1 else p.pdf(theta[s:e]) for p, s, e in
-                       zip(self, self._start_ix, self._end_ix)])
+        if theta.size == len(self):
+            pdf = np.prod([p.pdf(theta[s]) if e - s == 1 else p.pdf(theta[s:e]) for p, s, e in
+                           zip(self, self._start_ix, self._end_ix)])
+        elif theta.shape[1] == len(self):
+            pdf = np.prod(np.hstack([p.pdf(theta[:,s])[:,np.newaxis] if e - s == 1 else p.pdf(theta[:,s:e])[:,np.newaxis] for p, s, e in
+                           zip(self, self._start_ix, self._end_ix)]), axis=1)
+        else:
+            raise ValueError("theta must be either an array of shape (ndim,) or (batchsize, ndim)")
         return pdf
 
     def logpdf(self, theta):
-        logpdf = np.sum([p.logpdf(theta[s]) if e - s == 1 else p.logpdf(theta[s:e]) for p, s, e in
-                         zip(self, self._start_ix, self._end_ix)])
+        if theta.size == len(self):
+            logpdf = np.sum([p.logpdf(theta[s]) if e - s == 1 else p.logpdf(theta[s:e]) for p, s, e in
+                           zip(self, self._start_ix, self._end_ix)])
+        elif theta.shape[1] == len(self):
+            logpdf = np.sum(np.hstack([p.logpdf(theta[:,s])[:,np.newaxis] if e - s == 1 else p.logpdf(theta[:,s:e])[:,np.newaxis] for p, s, e in
+                           zip(self, self._start_ix, self._end_ix)]), axis=1)
+        else:
+            raise ValueError("theta must be either an array of shape (ndim,) or (batchsize, ndim)")
         return logpdf
 
     def gradient_logpdf(self, x, stepsize=None):
