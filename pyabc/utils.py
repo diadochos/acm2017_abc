@@ -1,6 +1,7 @@
+from functools import partial
+
 import numpy as np
 import scipy.stats as ss
-from functools import partial
 
 # some aliases for convenient call of scipy functions
 SCIPY_ALIASES = {
@@ -37,6 +38,7 @@ def scipy_from_str(name):
     name = name.lower()
     name = SCIPY_ALIASES.get(name, name)
     return getattr(ss, name)
+
 
 def numpy_sampler_from_str(name, *args):
     """Return the numpy.random sampling function corresponding to 'name'."""
@@ -81,6 +83,7 @@ def normalize_vector(v):
 
     return v
 
+
 def numgrad(fn, x, h=None, replace_neg_inf=True):
     """Naive numeric gradient implementation for scalar valued functions.
     Parameters
@@ -103,7 +106,6 @@ def numgrad(fn, x, h=None, replace_neg_inf=True):
     x = np.asanyarray(x, dtype=np.float).reshape(-1)
     dim = len(x)
     X = np.zeros((dim * 3, dim))
-
 
     for i in range(3):
         Xi = np.tile(x, (dim, 1))

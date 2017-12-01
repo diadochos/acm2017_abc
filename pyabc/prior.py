@@ -1,9 +1,10 @@
-from .utils import scipy_from_str, numpy_sampler_from_str, numgrad
-import scipy.stats as ss
 import numpy as np
+import scipy.stats as ss
+
+from .utils import scipy_from_str, numpy_sampler_from_str
 
 
-class Prior():
+class Prior:
     """Abstract base class for all prior distributions.
     Basically a wrapper for scipy distributions, which uses the corresponding
     numpy sampling function for performance reasons.
@@ -69,7 +70,7 @@ class Prior():
             if self.multivariate():
                 self._sample = sampler
             else:
-                self._sample = lambda s: sampler(size=(s,1)) if s else sampler()
+                self._sample = lambda s: sampler(size=(s, 1)) if s else sampler()
 
         except TypeError:
             # if arguments do not fit the scipy distribution
@@ -98,8 +99,6 @@ class Prior():
 
 
 class PriorList(list):
-    # TODO implement pdf and logpdf for batches, which would improve numerical diff performance
-
     def __init__(self, *args):
         list.__init__(self, *args)
         lens = self._lengths()
@@ -114,8 +113,9 @@ class PriorList(list):
             pdf = np.prod([p.pdf(theta[s]) if e - s == 1 else p.pdf(theta[s:e]) for p, s, e in
                            zip(self, self._start_ix, self._end_ix)])
         elif theta.shape[1] == len(self):
-            pdf = np.prod(np.hstack([p.pdf(theta[:,s])[:,np.newaxis] if e - s == 1 else p.pdf(theta[:,s:e])[:,np.newaxis] for p, s, e in
-                           zip(self, self._start_ix, self._end_ix)]), axis=1)
+            pdf = np.prod(np.hstack(
+                [p.pdf(theta[:, s])[:, np.newaxis] if e - s == 1 else p.pdf(theta[:, s:e])[:, np.newaxis] for p, s, e in
+                 zip(self, self._start_ix, self._end_ix)]), axis=1)
         else:
             raise ValueError("theta must be either an array of shape (ndim,) or (batchsize, ndim)")
         return pdf
@@ -123,10 +123,12 @@ class PriorList(list):
     def logpdf(self, theta):
         if theta.size == len(self):
             logpdf = np.sum([p.logpdf(theta[s]) if e - s == 1 else p.logpdf(theta[s:e]) for p, s, e in
-                           zip(self, self._start_ix, self._end_ix)])
+                             zip(self, self._start_ix, self._end_ix)])
         elif theta.shape[1] == len(self):
-            logpdf = np.sum(np.hstack([p.logpdf(theta[:,s])[:,np.newaxis] if e - s == 1 else p.logpdf(theta[:,s:e])[:,np.newaxis] for p, s, e in
-                           zip(self, self._start_ix, self._end_ix)]), axis=1)
+            logpdf = np.sum(np.hstack(
+                [p.logpdf(theta[:, s])[:, np.newaxis] if e - s == 1 else p.logpdf(theta[:, s:e])[:, np.newaxis] for
+                 p, s, e in
+                 zip(self, self._start_ix, self._end_ix)]), axis=1)
         else:
             raise ValueError("theta must be either an array of shape (ndim,) or (batchsize, ndim)")
         return logpdf
