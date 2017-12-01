@@ -111,6 +111,7 @@ def numgrad(fn, x, h=None, replace_neg_inf=True):
         X[i * dim:(i + 1) * dim, :] = Xi
 
     f = np.apply_along_axis(fn, axis=1, arr=X)
+    # TODO: batch applied logpdf for this: f = fn(X)
     f = f.reshape((3, dim))
 
     if replace_neg_inf:
