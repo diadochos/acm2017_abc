@@ -80,3 +80,42 @@ def normalize_vector(v):
         v = v / v_norm
 
     return v
+
+def numgrad(fn, x, h=None, replace_neg_inf=True):
+    """Naive numeric gradient implementation for scalar valued functions.
+    Parameters
+    ----------
+    fn
+    x : np.ndarray
+        A single point in 1d vector
+    h : float or list
+        Stepsize or stepsizes for the dimensions
+    replace_neg_inf : bool
+        Replace neg inf fn values with gradient 0 (useful for logpdf gradients)
+    Returns
+    -------
+    grad : np.ndarray
+        1D gradient vector
+    """
+    h = 0.00001 if h is None else h
+    h = np.asanyarray(h).reshape(-1)
+
+    x = np.asanyarray(x, dtype=np.float).reshape(-1)
+    dim = len(x)
+    X = np.zeros((dim * 3, dim))
+
+
+    for i in range(3):
+        Xi = np.tile(x, (dim, 1))
+        np.fill_diagonal(Xi, Xi.diagonal() + (i - 1) * h)
+        X[i * dim:(i + 1) * dim, :] = Xi
+
+    f = np.apply_along_axis(fn, axis=1, arr=X)
+    f = f.reshape((3, dim))
+
+    if replace_neg_inf:
+        if np.any(np.isneginf(f)):
+            return np.zeros(dim)
+
+    grad = np.gradient(f, *h, axis=0)
+    return grad[1, :]

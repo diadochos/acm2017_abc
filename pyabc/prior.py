@@ -1,4 +1,4 @@
-from .utils import scipy_from_str, numpy_sampler_from_str
+from .utils import scipy_from_str, numpy_sampler_from_str, numgrad
 from functools import partial
 import scipy.stats as ss
 import numpy as np
@@ -117,12 +117,37 @@ class PriorList(list):
         return np.vstack([p.sample(size) for p in self]).T
 
     def pdf(self, theta):
-        pdf = np.prod([p.pdf(theta[s:e]) for p,s,e in zip(self, self._start_ix, self._end_ix)])
+        pdf = np.prod([p.pdf(theta[s]) if e - s == 1 else p.pdf(theta[s:e]) for p,s,e in zip(self, self._start_ix, self._end_ix)])
         return pdf
 
     def logpdf(self, theta):
-        logpdf = np.sum([p.logpdf(theta[s:e]) for p,s,e in zip(self, self._start_ix, self._end_ix)])
+        logpdf = np.sum([p.logpdf(theta[s]) if e - s == 1 else p.logpdf(theta[s:e]) for p,s,e in zip(self, self._start_ix, self._end_ix)])
         return logpdf
+
+    def gradient_logpdf(self, x, stepsize=None):
+        """Return the gradient of log density of the joint prior at x.
+        Parameters
+        ----------
+        x : float or np.ndarray
+        stepsize : float or list
+            Stepsize or stepsizes for the dimensions
+        """
+        x = np.asanyarray(x)
+        ndim = x.ndim
+        x = x.reshape((-1, len(self)))
+
+        grads = np.zeros_like(x)
+
+        for i in range(len(grads)):
+            xi = x[i]
+            grads[i] = numgrad(self.logpdf, xi, h=stepsize)
+
+        grads[np.isinf(grads)] = 0
+        grads[np.isnan(grads)] = 0
+
+        if ndim == 0 or (ndim == 1 and len(self) > 1):
+            grads = grads[0]
+        return grads
 
     def tolist(self):
         return list(self)
