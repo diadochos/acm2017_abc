@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as ss
+
 import pyabc
 
 PLOTS_PER_ROW = 3
+
 
 def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=True, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
@@ -52,7 +54,6 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
         plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
         plt.show()
 
-
     nr_plots = sampler.Thetas.shape[1]  # number of columns = model parameters
     nr_rows = (nr_plots // (PLOTS_PER_ROW + 1)) + 1  # has to start by one
 
@@ -87,7 +88,6 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True,
     delta_max_y = sampler.particles[0].max() - sampler.particles[0].min()
     CIRCLE_MAX_RADIUS = delta_max_y / 50
     y_lim = (sampler.particles[0].min() - 2 * CIRCLE_MAX_RADIUS, sampler.particles[0].max() + 2 * CIRCLE_MAX_RADIUS)
-
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 

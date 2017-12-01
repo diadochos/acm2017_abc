@@ -1,8 +1,9 @@
+import time
+
+import numpy as np
+
 from .sampler import BaseSampler
 from .utils import flatten_function
-import matplotlib.pyplot as plt
-import numpy as np
-import time
 
 
 class RejectionSampler(BaseSampler):
@@ -21,11 +22,11 @@ class RejectionSampler(BaseSampler):
         attr2 (:obj:`int`, optional): Description of `attr2`.
 
     """
+
     # set and get for threshold
     @property
     def threshold(self):
         return self._threshold
-
 
     @threshold.setter
     def threshold(self, threshold):
@@ -43,12 +44,10 @@ class RejectionSampler(BaseSampler):
         # call BaseSampler __init__
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
 
-
     def _reset(self):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
-
 
     def _run_rejection_sampling(self, nr_samples, batch_size):
         """the abc rejection sampling algorithm with batches"""
@@ -94,7 +93,6 @@ class RejectionSampler(BaseSampler):
         self._distances = distances[:nr_samples]
         return thetas
 
-
     def sample(self, threshold, nr_samples, batch_size=1000):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
 
@@ -110,7 +108,8 @@ class RejectionSampler(BaseSampler):
         self.threshold = threshold
 
         if self.verbosity:
-            print("Rejection sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
+            print("Rejection sampler started with threshold: {} and number of samples: {}".format(self.threshold,
+                                                                                                  nr_samples))
 
         self._reset()
 
@@ -118,10 +117,11 @@ class RejectionSampler(BaseSampler):
         self._run_rejection_sampling(nr_samples, batch_size)
 
         if self.verbosity:
-            print("Samples: %6d - Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
-
+            print("Samples: %6d - Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
+                nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
 
     def __str__(self):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(
-            type(self).__name__, len(self.priors), self.simulator, len(self.summaries), self.observation.shape, self.discrepancy, self.verbosity
+            type(self).__name__, len(self.priors), self.simulator, len(self.summaries), self.observation.shape,
+            self.discrepancy, self.verbosity
         )
