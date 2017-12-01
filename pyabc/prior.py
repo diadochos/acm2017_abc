@@ -65,12 +65,11 @@ class Prior():
             except:
                 sampler = self.distribution.rvs
 
-            # if the prior is multivariate, the samples need to be returned
-            # in a transposed format for the rejection sampler to work
+            # if the prior is 1d, return a (size, 1) array
             if self.multivariate():
-                self._sample = lambda s: sampler(size=s).T
-            else:
                 self._sample = sampler
+            else:
+                self._sample = lambda s: sampler(size=(s,1))
 
         except TypeError:
             # if arguments do not fit the scipy distribution
@@ -108,7 +107,7 @@ class PriorList(list):
         self._end_ix = np.cumsum(lens)
 
     def sample(self, size):
-        return np.vstack([p.sample(size) for p in self]).T
+        return np.hstack([p.sample(size) for p in self])
 
     def pdf(self, theta):
         pdf = np.prod([p.pdf(theta[s]) if e - s == 1 else p.pdf(theta[s:e]) for p, s, e in
