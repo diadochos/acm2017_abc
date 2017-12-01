@@ -1,5 +1,6 @@
 from .sampler import BaseSampler
 from .utils import flatten_function, normalize_vector
+from .acquisition import MaxPosteriorVariance
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")

@@ -1,9 +1,10 @@
+import GPyOpt
 from GPyOpt.acquisitions.base import AcquisitionBase
-from GPyOpt.optimization import acquisition_optimizer
+import scipy.stats as ss
+import numpy as np
+
 
 class MaxPosteriorVariance(AcquisitionBase):
-
-    analytical_gradient_prediction = True
 
     def __init__(self, model, space, prior, quantile_eps=.01, optimizer=None):
 
@@ -15,11 +16,11 @@ class MaxPosteriorVariance(AcquisitionBase):
         # The ABC threshold is initialised to a pre-set value as the gp is not yet fit.
         self.eps = .1
 
-
-
-    def acquisition_function(self,x):
-        mean, var = self.model.predict(theta_new, noiseless=True)
-        sigma2_n = self.model.noise
+    def _compute_acq(self, x):
+        print('Compute acq')
+        print(x)
+        mean, var = self.model.model.predict_noiseless(x)
+        sigma2_n = self.model.model.Gaussian_noise.variance[0]
 
         # Using the cdf of Skewnorm to avoid explicit Owen's T computation.
         a = np.sqrt(sigma2_n) / np.sqrt(sigma2_n + 2. * var)  # Skewness.
@@ -28,16 +29,16 @@ class MaxPosteriorVariance(AcquisitionBase):
         phi_norm = ss.norm.cdf(self.eps, loc=mean, scale=scale)
         var_p_a = phi_skew - phi_norm**2
 
-        val_prior = self.prior.pdf(theta_new).ravel()[:, np.newaxis]
+        val_prior = self.prior.pdf(x).ravel()[:, np.newaxis]
 
         var_approx_posterior = val_prior**2 * var_p_a
         return var_approx_posterior
 
-    def acquisition_function_withGradients(self,x):
+    def _compute_acq_withGradients(self, x):
         phi = ss.norm.cdf
-        mean, var = self.model.predict(theta_new, noiseless=True)
-        grad_mean, grad_var = self.model.predictive_gradients(theta_new)
-        sigma2_n = self.model.noise
+        mean, var = self.model.model.predict_noiseless(x)
+        grad_mean, grad_var = self.model.model.predictive_gradients(x)
+        sigma2_n = self.model.Gaussian_noise.variance[0]
         scale = np.sqrt(sigma2_n + var)
 
         a = (self.eps - mean) / scale
@@ -58,10 +59,14 @@ class MaxPosteriorVariance(AcquisitionBase):
 
         # Obtaining the gradient prior by applying the following rule:
         # (log f(x))' = f'(x)/f(x) => f'(x) = (log f(x))' * f(x)
-        term_prior = self.prior.pdf(theta_new).ravel()[:, np.newaxis]
-        grad_prior_log = self.prior.gradient_logpdf(theta_new)
+        term_prior = self.prior.pdf(x).ravel()[:, np.newaxis]
+        grad_prior_log = self.prior.gradient_logpdf(x)
         term_grad_prior = term_prior * grad_prior_log
 
         gradient = 2. * term_prior * (int_1 - int_2) * term_grad_prior + \
             term_prior**2 * (grad_int_1 - grad_int_2)
         return gradient
+
+    @staticmethod
+    def fromDict(model, space, optimizer, cost_withGradients, config):
+        raise NotImplementedError()
