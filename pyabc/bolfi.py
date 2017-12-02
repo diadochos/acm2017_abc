@@ -10,10 +10,11 @@ from .utils import flatten_function, normalize_vector
 
 from .acquisition import MaxPosteriorVariance
 import warnings
+import GPyOpt
 
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    from GPyOpt.methods import BayesianOptimization
+# with warnings.catch_warnings():
+#     warnings.simplefilter("ignore")
+#     from GPyOpt.methods import BayesianOptimization
 
 
 class BOLFI(BaseSampler):
@@ -85,17 +86,32 @@ class BOLFI(BaseSampler):
         # evidence_theta = self.priors.sample(10)
         # evidence_f = np.apply_along_axis(f, axis=1, arr=evidence_theta)
 
-        bounds = [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in
-                  zip(self.priors, self.domain)]
+        # optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
+        #                              exact_feval=True, model_type='GP',
+        #                              num_cores=-1, initial_design_numdata=10,
+        #                              initial_design_type='sobol')
 
-        optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
-                                     exact_feval=True, model_type='GP',
-                                     num_cores=-1, initial_design_numdata=10,
-                                     initial_design_type='sobol')
-
-        max_iter = 30  # evaluation budget
+        max_iter = 100  # evaluation budget
         max_time = 60  # time budget
         eps = 10e-6  # Minimum allows distance between the las two observations
+
+        model = GPyOpt.models.GPModel(verbose=False)
+
+        space = GPyOpt.Design_space(space= [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in
+                  zip(self.priors, self.domain)])
+
+
+        acquisition = MaxPosteriorVariance(model, space, self.priors, eps)
+
+        objective = GPyOpt.core.task.SingleObjective(f)
+
+        initial_design = self.priors.sample(10)
+
+        evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
+
+        optim = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator, initial_design)
+
+
 
         print("Starting Bayesian Optimization")
 
@@ -113,6 +129,8 @@ class BOLFI(BaseSampler):
         # setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function
         # that returns the natural logarithm of the posterior propability
         sampler = emcee.EnsembleSampler(n_chains, len(self.priors), logposterior)
+
+        print('Starting MCMC sampling with approximative likelihood')
 
         # begin mcmc with an exploration phase and store end pos for second run
         p0 = self.priors.sample(n_chains)

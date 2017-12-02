@@ -109,7 +109,7 @@ class PriorList(list):
         return np.hstack([p.sample(size) for p in self])
 
     def pdf(self, theta):
-        if theta.size == len(self):
+        if theta.shape[0] == len(self):
             pdf = np.prod([p.pdf(theta[s]) if e - s == 1 else p.pdf(theta[s:e]) for p, s, e in
                            zip(self, self._start_ix, self._end_ix)])
         elif theta.shape[1] == len(self):
@@ -121,7 +121,7 @@ class PriorList(list):
         return pdf
 
     def logpdf(self, theta):
-        if theta.size == len(self):
+        if theta.shape[0] == len(self):
             logpdf = np.sum([p.logpdf(theta[s]) if e - s == 1 else p.logpdf(theta[s:e]) for p, s, e in
                              zip(self, self._start_ix, self._end_ix)])
         elif theta.shape[1] == len(self):
