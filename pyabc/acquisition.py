@@ -30,13 +30,13 @@ class MaxPosteriorVariance(AcquisitionBase):
         val_prior = self.prior.pdf(x).ravel()[:, np.newaxis]
 
         var_approx_posterior = val_prior**2 * var_p_a
-        return var_approx_posterior
+        return -var_approx_posterior
 
     def _compute_acq_withGradients(self, x):
         phi = ss.norm.cdf
         mean, var = self.model.model.predict_noiseless(x)
         grad_mean, grad_var = self.model.model.predictive_gradients(x)
-        sigma2_n = self.model.Gaussian_noise.variance[0]
+        sigma2_n = self.model.model.Gaussian_noise.variance[0]
         scale = np.sqrt(sigma2_n + var)
 
         # Using the cdf of Skewnorm to avoid explicit Owen's T computation.
@@ -74,7 +74,7 @@ class MaxPosteriorVariance(AcquisitionBase):
 
         gradient = 2. * term_prior * (int_1 - int_2) * term_grad_prior + \
             term_prior**2 * (grad_int_1 - grad_int_2)
-        return var_approx_posterior, gradient
+        return -var_approx_posterior, -gradient
 
     @staticmethod
     def fromDict(model, space, optimizer, cost_withGradients, config):

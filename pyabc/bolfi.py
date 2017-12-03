@@ -91,9 +91,9 @@ class BOLFI(BaseSampler):
         #                              num_cores=-1, initial_design_numdata=10,
         #                              initial_design_type='sobol')
 
-        max_iter = 100  # evaluation budget
-        max_time = 60  # time budget
-        eps = 10e-6  # Minimum allows distance between the las two observations
+        max_iter = 1000  # evaluation budget
+        max_time = 120  # time budget
+        eps = 10e-6  # Minimum allows distance between the last two observations
 
         model = GPyOpt.models.GPModel(verbose=False)
 
@@ -101,7 +101,7 @@ class BOLFI(BaseSampler):
                   zip(self.priors, self.domain)])
 
 
-        acquisition = MaxPosteriorVariance(model, space, self.priors, eps)
+        acquisition = MaxPosteriorVariance(model, space, self.priors, eps=0.01)
 
         objective = GPyOpt.core.task.SingleObjective(f)
 
@@ -118,7 +118,7 @@ class BOLFI(BaseSampler):
         optim.run_optimization(max_iter, max_time, eps)
         self._bolfi = optim
 
-        def loglikelihood(theta, h=0.5):
+        def loglikelihood(theta, h=0.01):
             # eqn 47 from BOLFI paper
             m, s = optim.model.predict(theta)
             # F = gaussian cdf, see eqn 28 in BOLFI paper
