@@ -1,8 +1,11 @@
-#sampler.py
+# sampler.py
 
 import abc
+
 import numpy as np
+
 from .prior import Prior, PriorList
+
 
 class BaseSampler(metaclass=abc.ABCMeta):
     """Abstract base class for all samplers. Defines common setters and properties
@@ -24,7 +27,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
     # dict value parameters
     __distances = {
         'euclidean':
-            lambda x,y: np.linalg.norm(x-y)
+            lambda x, y: np.linalg.norm(x - y)
     }
 
     def __init__(self, priors, simulator, observation, summaries, distance, verbosity, seed):
@@ -40,7 +43,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
         if seed is not None:
             np.random.seed(seed)
-
 
     # set and get simulator
     @property
@@ -64,10 +66,10 @@ class BaseSampler(metaclass=abc.ABCMeta):
     def priors(self, priors):
         """func doc"""
         priors = np.atleast_1d(priors)
-        if all(issubclass(type(p),Prior) for p in priors):
-             self._priors = PriorList(priors)
+        if all(issubclass(type(p), Prior) for p in priors):
+            self._priors = PriorList(priors)
         else:
-            print(all(issubclass(p,Prior) for p in priors))
+            print(all(issubclass(p, Prior) for p in priors))
             raise TypeError("Passed argument {} is not a subclass of prior!".format(priors))
 
     # set and get summaries
@@ -94,13 +96,16 @@ class BaseSampler(metaclass=abc.ABCMeta):
         """func doc"""
         if callable(d):
             self._distance = d
-        elif isinstance(d, str) :
+        elif isinstance(d, str):
             if d in self.__distances.keys():
                 self._distance = self.__distances[d]
             else:
-                raise KeyError("Passed argument {} is not a valid distance function. Choose from {}.".format(d, self.__distances.keys()))
+                raise KeyError("Passed argument {} is not a valid distance function. Choose from {}.".format(d,
+                                                                                                             self.__distances.keys()))
         else:
-            raise TypeError("Passed argument {} is neither a callable function nor a name of predefined distance functions!".format(d))
+            raise TypeError(
+                "Passed argument {} is neither a callable function nor a name of predefined distance functions!".format(
+                    d))
 
     # set and get observation
     @property
@@ -139,7 +144,7 @@ class BaseSampler(metaclass=abc.ABCMeta):
 
     @nr_samples.setter
     def nr_samples(self, nr_samples):
-        if isinstance(nr_samples, (int,float)):
+        if isinstance(nr_samples, (int, float)):
             if nr_samples > 0:
                 self._nr_samples = int(nr_samples)
             else:
@@ -171,7 +176,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
     @property
     def distances(self):
         return self._distances
-
 
     @abc.abstractmethod
     def sample(self):

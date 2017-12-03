@@ -1,16 +1,19 @@
+import time
+import warnings
+
+import emcee
+import numpy as np
+import scipy.stats as ss
+
 from .sampler import BaseSampler
 from .utils import flatten_function, normalize_vector
-import warnings
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from GPyOpt.methods import BayesianOptimization
-import numpy as np
-import scipy.stats as ss
-import emcee
-import time
+
 
 class BOLFI(BaseSampler):
-
     @property
     def domain(self):
         return self._domain
@@ -56,8 +59,8 @@ class BOLFI(BaseSampler):
         self._run_BOLFI_sampling(nr_samples, n_chains, burn_in, **kwargs)
 
         if self.verbosity == 1:
-            print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
-
+            print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
+                nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
 
     def _run_BOLFI_sampling(self, nr_samples, n_chains, burn_in, **kwargs):
         # summary statistics of the observed data
@@ -66,7 +69,8 @@ class BOLFI(BaseSampler):
         fill_up, rest = divmod(nr_samples, n_chains)
 
         # define distance function
-        f = lambda thetas: self.distance(stats_x, normalize_vector(flatten_function(self.summaries, self.simulator(*thetas.flatten()))))
+        f = lambda thetas: self.distance(stats_x, normalize_vector(
+            flatten_function(self.summaries, self.simulator(*thetas.flatten()))))
 
         # initialize the loop
         accepted_thetas = []
@@ -78,17 +82,17 @@ class BOLFI(BaseSampler):
         # evidence_theta = self.priors.sample(10)
         # evidence_f = np.apply_along_axis(f, axis=1, arr=evidence_theta)
 
-        bounds = [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in zip(self.priors, self.domain)]
-
+        bounds = [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in
+                  zip(self.priors, self.domain)]
 
         optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
                                      exact_feval=True, model_type='GP',
                                      num_cores=-1, initial_design_numdata=10,
                                      initial_design_type='sobol')
 
-        max_iter = 30    # evaluation budget
-        max_time = 60     # time budget
-        eps      = 10e-6  # Minimum allows distance between the las two observations
+        max_iter = 30  # evaluation budget
+        max_time = 60  # time budget
+        eps = 10e-6  # Minimum allows distance between the las two observations
 
         print("Starting Bayesian Optimization")
 
@@ -103,7 +107,8 @@ class BOLFI(BaseSampler):
 
         logposterior = lambda theta: loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
 
-        #setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function that returns the natural logarithm of the posterior propability
+        # setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function
+        # that returns the natural logarithm of the posterior propability
         sampler = emcee.EnsembleSampler(n_chains, len(self.priors), logposterior)
 
         # begin mcmc with an exploration phase and store end pos for second run
@@ -122,10 +127,9 @@ class BOLFI(BaseSampler):
         thetas = sampler.flatchain[:nr_samples]
 
         self._Thetas = thetas
-        #self._distances = distances[:nr_samples]
+        # self._distances = distances[:nr_samples]
 
         return thetas
-
 
     def _reset(self):
         """reset class properties for a new call of sample method"""

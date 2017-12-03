@@ -12,7 +12,7 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
-        'matplotlib'
+        'matplotlib', 'emcee', 'GPyOpt'
     ],
     zip_safe=False
 )
