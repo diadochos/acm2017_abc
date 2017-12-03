@@ -99,7 +99,7 @@ class BOLFI(BaseSampler):
             # eqn 47 from BOLFI paper
             m, s = optim.model.predict(theta)
             # F = gaussian cdf, see eqn 28 in BOLFI paper
-            return ss.norm.logcdf((self.threshold - m) / s).flatten()
+            return ss.norm.logcdf((self.threshold - m) / np.sqrt(s)).flatten()
 
         logposterior = lambda theta: loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
 
