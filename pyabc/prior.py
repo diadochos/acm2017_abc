@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.stats as ss
 
-from .utils import scipy_from_str, numpy_sampler_from_str
+from .utils import scipy_from_str, numpy_sampler_from_str, numgrad
 
 
 class Prior:
@@ -109,7 +109,7 @@ class PriorList(list):
         return np.hstack([p.sample(size) for p in self])
 
     def pdf(self, theta):
-        if theta.size == len(self):
+        if theta.shape[0] == len(self):
             pdf = np.prod([p.pdf(theta[s]) if e - s == 1 else p.pdf(theta[s:e]) for p, s, e in
                            zip(self, self._start_ix, self._end_ix)])
         elif theta.shape[1] == len(self):
@@ -121,7 +121,7 @@ class PriorList(list):
         return pdf
 
     def logpdf(self, theta):
-        if theta.size == len(self):
+        if theta.shape[0] == len(self):
             logpdf = np.sum([p.logpdf(theta[s]) if e - s == 1 else p.logpdf(theta[s:e]) for p, s, e in
                              zip(self, self._start_ix, self._end_ix)])
         elif theta.shape[1] == len(self):
@@ -132,6 +132,31 @@ class PriorList(list):
         else:
             raise ValueError("theta must be either an array of shape (ndim,) or (batchsize, ndim)")
         return logpdf
+
+    def gradient_logpdf(self, x, stepsize=None):
+        """Return the gradient of log density of the joint prior at x.
+        Parameters
+        ----------
+        x : float or np.ndarray
+        stepsize : float or list
+            Stepsize or stepsizes for the dimensions
+        """
+        x = np.asanyarray(x)
+        ndim = x.ndim
+        x = x.reshape((-1, len(self)))
+
+        grads = np.zeros_like(x)
+
+        for i in range(len(grads)):
+            xi = x[i]
+            grads[i] = numgrad(self.logpdf, xi, h=stepsize)
+
+        grads[np.isinf(grads)] = 0
+        grads[np.isnan(grads)] = 0
+
+        if ndim == 0 or (ndim == 1 and len(self) > 1):
+            grads = grads[0]
+        return grads
 
     def tolist(self):
         return list(self)
