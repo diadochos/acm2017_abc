@@ -36,12 +36,18 @@ class BOLFI(BaseSampler):
         else:
             raise TypeError('"domain" needs to be a list!')
 
-    def __init__(self, priors, simulator, observation, summaries, domain, distance='euclidean', verbosity=1, seed=None):
+    def __init__(self, priors, simulator, observation, summaries, domain, acquisition='LCB', distance='euclidean', verbosity=1, seed=None):
 
         # call BaseSampler __init__
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
 
         self.domain = domain
+
+        # choose the acquisition function as either LCB or MaxVar
+        if acquisition.lower() in ['lcb', 'maxvar']:
+            self.acqusition_type = acquisition.lower()
+        else:
+            raise ValueError('acquisition must bei either "lcb" (lower confidence bound) or "maxvar" (maximum posterior variance)')
 
     def sample(self, nr_samples, threshold, n_chains=2, burn_in=100, **kwargs):
         """
@@ -76,11 +82,10 @@ class BOLFI(BaseSampler):
         f = lambda thetas: self.distance(stats_x, normalize_vector(
             flatten_function(self.summaries, self.simulator(*thetas.flatten()))))
 
-        # initialize the loop
-        accepted_thetas = []
-        distances = []
-
+        # intialize timer
         start = time.clock()
+
+        # old code (simple GPyOpt interface)
 
         # create initial evidence set
         # evidence_theta = self.priors.sample(10)
@@ -91,24 +96,38 @@ class BOLFI(BaseSampler):
         #                              num_cores=-1, initial_design_numdata=10,
         #                              initial_design_type='sobol')
 
-        max_iter = 1000  # evaluation budget
-        max_time = 120  # time budget
+
+        # TODO: make these arguments of __init__
+        max_iter = 100  # evaluation budget
+        max_time = 60  # time budget
         eps = 10e-6  # Minimum allows distance between the last two observations
 
+        # initialize Gaussian Process model
         model = GPyOpt.models.GPModel(verbose=False)
 
-        space = GPyOpt.Design_space(space= [{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in
+        # create a space
+        # TODO: handle discrete parameters differently
+        space = GPyOpt.Design_space(space=[{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in
                   zip(self.priors, self.domain)])
+        bounds = space.get_bounds()
 
-
-        acquisition = MaxPosteriorVariance(model, space, self.priors, eps=0.01)
-
+        # create GPyOpt object from objective function (distance)
         objective = GPyOpt.core.task.SingleObjective(f)
 
-        initial_design = self.priors.sample(10)
+        # initialize acquisition function
+        acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
+        if self.acqusition_type == 'maxvar':
+            acquisition = MaxPosteriorVariance(model, space, self.priors, eps=0.01, optimizer=acquisition_optimizer)
+        elif self.acqusition_type == 'lcb':
+            acquisition = GPyOpt.acquisitions.AcquisitionLCB(model, space, optimizer=acquisition_optimizer)
 
         evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
 
+
+        # initialize by sampling from the prior
+        initial_design = self.priors.sample(10)
+
+        # finally create the Bayesian Optimization object
         optim = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator, initial_design)
 
 
@@ -118,13 +137,21 @@ class BOLFI(BaseSampler):
         optim.run_optimization(max_iter, max_time, eps)
         self._bolfi = optim
 
+        # approximate lilkelihood
         def loglikelihood(theta, h=0.01):
             # eqn 47 from BOLFI paper
             m, s = optim.model.predict(theta)
             # F = gaussian cdf, see eqn 28 in BOLFI paper
             return ss.norm.logcdf((self.threshold - m) / s).flatten()
 
-        logposterior = lambda theta: loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
+        # compute posterior from likelihood and prior
+        # includes check for bounds
+        # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
+        def logposterior(theta):
+            for x, bound in zip(theta, bounds):
+                if x < bound[0] or x > bound[1]:
+                    return -np.inf
+            return loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
 
         # setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function
         # that returns the natural logarithm of the posterior propability

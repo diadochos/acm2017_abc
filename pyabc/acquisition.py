@@ -8,7 +8,6 @@ class MaxPosteriorVariance(AcquisitionBase):
 
     def __init__(self, model, space, prior, eps=.01, optimizer=None):
 
-        optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
         super(MaxPosteriorVariance, self).__init__(model, space, optimizer)
 
         self.prior = prior
