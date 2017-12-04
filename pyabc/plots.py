@@ -1,11 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as ss
+
 import pyabc
 
 PLOTS_PER_ROW = 3
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, **kwargs):
+
+def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=True, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
@@ -25,7 +27,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, **kwarg
             plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id + 1)
 
             # plot posterior
-            plt.hist(theta, edgecolor="k", bins='auto', normed=kwargs.get('normed'), alpha=0.4)
+            plt.hist(theta, edgecolor="k", bins='auto', normed=normed, alpha=0.4)
             # plot mean
             plt.axvline(np.mean(theta), linewidth=1.2, color="m", linestyle="--", label="mean")
             # plot MAP
@@ -51,7 +53,6 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, **kwarg
 
         plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
         plt.show()
-
 
     nr_plots = sampler.Thetas.shape[1]  # number of columns = model parameters
     nr_rows = (nr_plots // (PLOTS_PER_ROW + 1)) + 1  # has to start by one
@@ -87,7 +88,6 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True,
     delta_max_y = sampler.particles[0].max() - sampler.particles[0].min()
     CIRCLE_MAX_RADIUS = delta_max_y / 50
     y_lim = (sampler.particles[0].min() - 2 * CIRCLE_MAX_RADIUS, sampler.particles[0].max() + 2 * CIRCLE_MAX_RADIUS)
-
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 

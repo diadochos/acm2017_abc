@@ -1,17 +1,32 @@
-from pyabc import BOLFI, Prior
+from pyabc.acquisition import MaxPosteriorVariance
+import GPyOpt
+from pyabc.prior import PriorList, Prior
 import numpy as np
-import matplotlib.pyplot as plt
 
-mu0 = 2.5
-y0 = np.random.normal(mu0, 1, 2)
+# --- Function to optimize
+func = GPyOpt.objective_examples.experiments2d.branin()
+#func.plot()
+
+
+objective = GPyOpt.core.task.SingleObjective(func.f)
 
 prior = Prior('uniform', 0, 5)
 
-def simulator(mu):
-    return np.random.normal(mu, 1, 2)
+priors = PriorList([prior, prior])
 
-bolfi = BOLFI(priors=[prior], simulator=simulator, observation=y0, summaries=[np.mean], domain=[(0,5)])
-thetas = bolfi.sample(threshold=0.5)
+model = GPyOpt.models.GPModel(optimize_restarts=5, verbose=False)
 
-plt.hist(thetas, bins=50)
-plt.show()
+space = GPyOpt.Design_space(space =[{'name': 'var_1', 'type': 'continuous', 'domain': (-5,10)},
+                                    {'name': 'var_2', 'type': 'continuous', 'domain': (1,15)}])
+
+acquisition = MaxPosteriorVariance(model, space, priors)
+
+
+initial_design = GPyOpt.experiment_design.initial_design('random', space, 5)
+
+evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
+
+bo = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator, initial_design)
+
+max_iter  = 10
+bo.run_optimization(max_iter = max_iter)
