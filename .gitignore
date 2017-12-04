@@ -28,4 +28,6 @@ __pycache__/
 *.fot
 *.cb
 *.cb2
+*.synctex.gz
+/report/report.pdf
 
