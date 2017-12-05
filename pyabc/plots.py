@@ -17,7 +17,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
-    def _plot_thetas(thetas, threshold, xlim=kwargs.get('xlim')):
+    def _plot_thetas(thetas, threshold, xlim=None, ylim=None):
         nonlocal sampler, kde, nr_rows, names, kwargs
 
         fig = plt.figure()
@@ -43,6 +43,8 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
             # label of axis
             if xlim:
                 plt.xlim(xlim)
+            if ylim:
+                plt.ylim(ylim)
             plt.xlabel(names[plot_id])
             plt.legend(loc="upper right")
 
@@ -66,8 +68,9 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
     if isinstance(sampler, pyabc.SMCSampler) & plot_all:
         for epoch, threshold in enumerate(sampler.thresholds):
-            xlim = (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
-            _plot_thetas(sampler.particles[epoch], threshold, xlim)
+            xlim = kwargs.get('xlim') (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
+            ylim = kwargs.get('ylim')
+            _plot_thetas(sampler.particles[epoch], threshold, xlim, ylim)
 
 
 def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True, **kwargs):
