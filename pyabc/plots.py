@@ -17,7 +17,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
-    def _plot_thetas(thetas, threshold, xlim=None):
+    def _plot_thetas(thetas, threshold, xlim=kwargs.get('xlim')):
         nonlocal sampler, kde, nr_rows, names, kwargs
 
         fig = plt.figure()
