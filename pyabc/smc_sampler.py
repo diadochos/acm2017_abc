@@ -19,7 +19,7 @@ class SMCSampler(BaseSampler):
     @thresholds.setter
     def thresholds(self, thresholds):
         thresholds = np.atleast_1d(thresholds)
-        if all(isinstance(t, (int, float)) and (t > 0 or np.isclose(t, 0)) for t in thresholds):
+        if all((isinstance(t, (int, float)) and not t < 0 for t in thresholds)):
             self._thresholds = thresholds
         else:
             raise ValueError(
@@ -64,8 +64,6 @@ class SMCSampler(BaseSampler):
             Nothing
 
         """
-        if not thresholds:
-            raise ValueError("There must be at least one threshold value.")
 
         self._thresholds = thresholds
         self._threshold = thresholds[-1]
