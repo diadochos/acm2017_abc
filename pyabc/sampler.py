@@ -1,9 +1,9 @@
 # sampler.py
 
 import abc
-
+import dill as pickle
+import os
 import numpy as np
-
 from .prior import Prior, PriorList
 
 
@@ -184,3 +184,28 @@ class BaseSampler(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _reset(self):
         pass
+
+    def save(self, fname):
+        if not isinstance(fname, str):
+            raise ValueError("Parameter fname has to be a string.")
+
+        try:
+            if not os.path.isdir(os.path.basename(fname)):
+                os.makedirs(os.path.basename(fname), exist_ok=True)
+
+            pickle.dump(self, open(fname, "wb"))
+        except IOError as io:
+            print("IOError while saving class: {}".format(io))
+
+    @staticmethod
+    def load(fname):
+        if not isinstance(fname, str):
+
+            raise ValueError("Parameter fname has to be a string.")
+
+        try:
+            sampler = pickle.load(open(fname, "rb"))
+        except IOError as io:
+            print("IOError while saving class: {}".format(io))
+
+        return sampler
