@@ -65,6 +65,9 @@ class Tuberculosis(Example):
                 if limit_exceeded:
                     break
 
-        return np.array(sorted(infected_hosts[infected_hosts != 0], reverse=True))
+        for i in range(len(infected_hosts), m):
+            infected_hosts = np.vstack((infected_hosts, [0]))
+
+        return np.array(sorted(infected_hosts, reverse=True))[:m].flatten()
 
 tuberculosis = Tuberculosis()

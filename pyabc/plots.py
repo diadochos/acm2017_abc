@@ -17,7 +17,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
-    def _plot_thetas(thetas, threshold, xlim=None):
+    def _plot_thetas(thetas, threshold, xlim=None, ylim=None):
         nonlocal sampler, kde, nr_rows, names, kwargs
 
         fig = plt.figure()
@@ -42,7 +42,9 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
             # label of axis
             if xlim:
-                plt.xlim(xlim)
+                plt.xlim(xlim[plot_id])
+            if ylim:
+                plt.ylim(ylim)
             plt.xlabel(names[plot_id])
             plt.legend(loc="upper right")
 
@@ -59,15 +61,21 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
+    ylim = kwargs.get('ylim', None)
+    xlim = kwargs.get('xlim', None)
+
     if isinstance(sampler, pyabc.BaseSampler):
-        _plot_thetas(sampler.Thetas, sampler.threshold)
+        _plot_thetas(sampler.Thetas, sampler.threshold, xlim, ylim)
     else:
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
     if isinstance(sampler, pyabc.SMCSampler) & plot_all:
         for epoch, threshold in enumerate(sampler.thresholds):
-            xlim = (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
-            _plot_thetas(sampler.particles[epoch], threshold, xlim)
+            xlim = kwargs.get('xlim') or [(sampler.particles[0,:,t].min() - 0.1, sampler.particles[0,:,t].max() + 0.1)
+                                          for t
+                                          in
+                                          range(sampler.particles[0].shape[1])]
+            _plot_thetas(sampler.particles[epoch], threshold, xlim, ylim)
 
 
 def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True, **kwargs):
