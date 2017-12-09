@@ -42,7 +42,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
             # label of axis
             if xlim:
-                plt.xlim(xlim)
+                plt.xlim(xlim[plot_id])
             if ylim:
                 plt.ylim(ylim)
             plt.xlabel(names[plot_id])
@@ -61,8 +61,8 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
-    xlim = kwargs.get('xlim') or (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
-    ylim = kwargs.get('ylim')
+    ylim = kwargs.get('ylim', None)
+    xlim = kwargs.get('xlim', None)
 
     if isinstance(sampler, pyabc.BaseSampler):
         _plot_thetas(sampler.Thetas, sampler.threshold, xlim, ylim)
@@ -71,7 +71,10 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
     if isinstance(sampler, pyabc.SMCSampler) & plot_all:
         for epoch, threshold in enumerate(sampler.thresholds):
-            xlim = kwargs.get('xlim') or (sampler.particles[0].min() - 0.1, sampler.particles[0].max() + 0.1)
+            xlim = kwargs.get('xlim') or [(sampler.particles[0,:,t].min() - 0.1, sampler.particles[0,:,t].max() + 0.1)
+                                          for t
+                                          in
+                                          range(sampler.particles[0].shape[1])]
             _plot_thetas(sampler.particles[epoch], threshold, xlim, ylim)
 
 
