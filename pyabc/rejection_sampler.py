@@ -70,16 +70,26 @@ class RejectionSampler(BaseSampler):
 
         while len(accepted_thetas) < nr_samples:
             nr_batches += 1
+
             # draw batch_size parameters from priors
             thetas_batch = self.priors.sample(batch_size)
+
             # compute the summary statistics for this batch
             summaries_batch = np.apply_along_axis(simulate_and_summarize, axis=1, arr=thetas_batch)
+
             # compute the distances for this batch
             d_batch = np.apply_along_axis(compute_distance, axis=1, arr=summaries_batch)
 
             # accept only those thetas with a distance lower than the threshold
             accepted_thetas.extend(thetas_batch[d_batch <= self.threshold])
             distances.extend(d_batch[d_batch <= self.threshold])
+
+            if self.verbosity == 2:
+                print("batch: [{}] ".format(nr_batches))
+                print("thetas: {}".format(thetas_batch))
+                print("summaries: {}".format(summaries_batch))
+                print("distances: {}".format(d_batch))
+                print("accepted thetas: {}".format(accepted_thetas))
 
         # we only want nr_samples samples. throw away what's too much
         accepted_thetas = accepted_thetas[:nr_samples]
