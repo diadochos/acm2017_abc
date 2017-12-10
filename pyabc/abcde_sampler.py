@@ -153,10 +153,6 @@ class ABCDESampler(BaseSampler):
 
                 # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
                 if self.priors.pdf(theta_star) > 0:
-                    if theta_star[2] == 0:
-                        print("it: ", it)
-                        print("d == 0", theta_star)
-                    #print("crossover: ", theta_star)
                     self.mh_step(it, group, i, theta_star)
 
                     break
@@ -165,11 +161,8 @@ class ABCDESampler(BaseSampler):
     def mutate( self, it, group ):
         """ This slightly perturbs each particle within a group using a perturbation kernel (mv-gaussian)"""
         # TODO: is this really the best method to choose the step_size(?)
-        print("thetas:", self._particles[it - 1, group].T)
-        print("weights:", self._weights[it - 1, group, :])
         self._sigmas[it, group, :] = 2 * np.cov(self._particles[it - 1, group].T, aweights=self._weights[it - 1, group, :])
         sigma = self._sigmas[it, group, :]
-        print("sigma:", sigma)
 
         for i in range(self._pool_size):
             while True:
@@ -178,7 +171,6 @@ class ABCDESampler(BaseSampler):
 
                 # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
                 if self.priors.pdf(theta_star) > 0:
-                    print("mutate: ", theta_star)
                     self.mh_step(it, group, i, theta_star)
 
                     break
@@ -233,8 +225,6 @@ class ABCDESampler(BaseSampler):
                 self._distances[0, i, j] = d
                 # normalize weights within pool
             self._weights[0, i, :] = self._weights[0, i, :] / sum(self._weights[0, i, :])
-
-        print("initial weights", self._weights[0])
 
 
     def _run_ABCDE_sampling( self):
