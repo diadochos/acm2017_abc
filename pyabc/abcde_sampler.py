@@ -2,9 +2,8 @@ import time
 
 import numpy as np
 import scipy.stats as ss
-import copy 
+import pyabc
 
-from .rejection_sampler import RejectionSampler
 from .sampler import BaseSampler
 from .utils import flatten_function
 
@@ -12,259 +11,239 @@ from .utils import flatten_function
 
 
 class ABCDESampler(BaseSampler):
-   
 
     @property
-    def weights(self):
+    def weights( self ):
         return self._weights
 
+
     @property
-    def threshold(self):
+    def threshold( self ):
         return self._threshold
 
 
-    def __init__(self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None):
+    def __init__( self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None ):
         # call BaseSampler __init__
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
 
-    def sample(self, nr_iter, nr_samples, nr_groups, distance='euclidean'):
-        """Draw samples using Sequential Monte Carlo.
+
+    def sample( self, nr_iter, nr_samples, nr_groups, burn_in, alpha=0.1, beta=0.1, kappa=0.9, exp_lambda=20 ):
+        """Draw samples using the genetic ABCDE Algorithm
 
         Args:
-            thresholds: list of acceptance threshold. len(thresholds defines number of SMC iterations)
-            nr_particles: Number of particles used to represent the distribution
-            distance: distance measure to compare summary statistics. (default) euclidean
+            nr_iter: Number of iterations of the algorithm
+            nr_groups: Number of population pools
+            nr_samples: Number of samples we want to obtain from theta posterior
+  			burn_in: Number of iterations in 'burnin' phase
+            alpha: Probability to do the migration step
+            beta: Probability to do the mutation step
+            kappa: Probability to keep the newly generated theta component
+            exp_lambda: Value that is used to draw delta from exponential distribution
+
 
         Returns:
             Nothing
 
         """
         if (nr_samples % nr_groups) != 0:
-            raise ValueError("Nr samples has to be divided evenly into", nr_groups, 'groups')
+            raise ValueError("Nr samples must be divided evenly into", nr_groups, 'groups')
 
+        if (burn_in > nr_iter):
+            raise ValueError("Burn in must be smaller then the total number of iterations")
+
+        self._alpha = alpha
+        self._beta = beta
+        self._kappa = kappa
+        self._exp_lambda = exp_lambda
+
+        # extend list of priors by prior for delta
+        exponential_prior = pyabc.Prior('expon', exp_lambda)
+        self.priors = self.priors.append(
+            exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
+
+        self._nr_groups = nr_groups
+        self._pool_size = int(nr_samples / nr_groups)  # number of particles per group
 
         print("ABC-Differential-Evolution sampler started with number of samples: {}".format(nr_samples))
 
         self._reset()
         self._run_ABCDE_sampling(nr_samples, nr_groups, nr_iter)
+
         if self.verbosity == 1:
             print("Samples: %6d - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
                 nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
 
-    def calculate_fitness(self,curr_theta, delta, distance):
-        error_distribution = ss.distributions.norm(0,delta)
-        delta_prior = ss.distributions.expon(20).pdf(delta)
-        fitness = self.priors.pdf(curr_theta)  * error_distribution.pdf(distance) * delta_prior
+
+    def calculate_fitness( self, curr_theta, distance ):
+        """Eq (3) extended by delta prior from paper, calculate fitness of proposed theta"""
+
+        error_distribution = ss.norm(0, curr_theta[
+            -1])  # delta is always last entry of theta vector and after burn in equals group delta
+        fitness = self.priors.pdf(curr_theta) * error_distribution.pdf(distance)
+
         return fitness
 
-    def sample_non_matching_thetas(self,it,pool):     
-        if self._pool_size == 1:
-            return 0,0 
 
-        theta_m = np.random.randint(0,self._pool_size )
-        theta_n = np.random.randint(0,self._pool_size )
+    def mh_step( self, it, group, i, theta_star ):
+        """perform the metropolis hasting update step, Eq (6) in the paper """
+        theta_old = self._particles[it - 1, group, i]
 
-        while theta_n == theta_m: 
-            theta_m = np.random.randint(0,self._pool_size ) 
-            theta_n = np.random.randint(0,self._pool_size )
+        Y = self.simulator(*(np.atleast_1d(theta_star[:-1])))  # unpack thetas as single arguments for simulator
+        stats_y = flatten_function(self.summaries, Y)
+        d = self.distance(self._stats_x, stats_y)
 
-        return self._thetas[it-1,pool,theta_m,:], self._thetas[it-1,pool,theta_n,:] 
+        # only change the delta parameter during burnin and take the groups delta during sample mode
+        if self._sampling_mode == 'sample':
+            theta_star[-1] = self._group_deltas[group]
+
+        proposal_fitness = self.calculate_fitness(theta_star, d)
+        previous_fitness = self._weights[it - 1, group, i]
+
+        # calculate MH probability
+        MH_prob = min(1, proposal_fitness / previous_fitness)
+        u = np.random.uniform(0, 1)
+
+        if u < MH_prob:
+            self._particles[it, group, i, :] = theta_star
+            self._distances[it, group, i] = d
+            self._weights[it, group, i] = proposal_fitness
+        else:
+            self._particles[it, group, i, :] = theta_old
+            self._distances[it, group, i] = self._distances[it - 1, group, i]
+            self._weights[it, group, i] = previous_fitness
 
 
-    def crossover(self,it,pool):
-        for i in range(self._pool_size ):
+    def crossover( self, it, group ):
+        """This generates new particles, by operating in the vector space of thetas for a particular particle cluster"""
+        for i in range(self._pool_size):
             while True:
-                #choose params we use for linear combination
-                y1 = np.random.uniform(0.5,1)        
-                y2 = np.random.uniform(0.5,1)
-                b = np.random.uniform(-0.0001,0.0001)
-
-                #get index for base particle
-                idx_b = np.random.choice(np.arange(self._pool_size ), p = self._weights[it-1,pool,:])
-
-                #get the 3 theta vectors used for crossover
-                theta_t = self._thetas[it-1,pool,i,:]
-                theta_b = self._thetas[it-1,pool,idx_b,:] #base_particle
-                theta_m, theta_n = self.sample_non_matching_thetas(it,pool)
-
-                #find a new theta, as a linear combination in the vector space of thetas within the cluster
+                # choose params we use for linear combination
+                y1 = np.random.uniform(0.5, 1)
+                y2 = 0
                 if self._sampling_mode == 'burnin':
-                    theta_star = theta_t + y1*(theta_m - theta_n) + y2*(theta_b-theta_b) + b
-                else:
-                    theta_star = theta_t + y1*(theta_m - theta_n) +  b
+                    y2 = np.random.uniform(0.5, 1)
+                b = np.random.uniform(-0.001, 0.001)  # TODO make this a model parameter(?)
 
-                #keep some of the old features with probability (1-k)
-                reset_probability = np.random.uniform(0,1, size = len(theta_star))
+                # index party!
+                # get indices for all particles
+                idx_b = np.random.choice(np.arange(self._pool_size), p=self._weights[it - 1, group, :])
+                idx_all = np.arange(self._pool_size)
+            idx_all = np.delete(idx_all, [i, idx_b])
+            idx_m, idx_n = np.random.choice(idx_all, 2)
 
-                for j in range(len(theta_star)):
-                    if reset_probability[j] < (1-self.k):
-                        theta_star[j] = theta_t[j]
+            # get the 3 theta vectors used for crossover
+            theta_t = self._particles[it - 1, group, i]
+            theta_b = self._particles[it - 1, group, idx_b]  # base_particle
+            theta_m = self._particles[it - 1, group, idx_m]
+            theta_n = self._particles[it - 1, group, idx_n]
 
-                #make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
-                if self.priors.pdf(theta_star) > 0:
+            # find a new theta, as a linear combination in the vector space of thetas within the cluster
+            theta_star = theta_t + y1 * (theta_m - theta_n) + y2 * (theta_b - theta_t) + b
 
-                    Y = self.simulator(*(np.atleast_1d(theta_star)))  # unpack thetas as single arguments for simulator
-                    stats_y = flatten_function(self.summaries, Y)
-                    d = self.distance(self._stats_x, stats_y)
-                    
-                    #TODO save the deltas(?)
-                    delta = np.random.exponential(20)
+            # keep some of the old features with probability (1-k)
+            reset_probabilities = np.random.uniform(0, 1, size=len(theta_star))
+            for j in range(len(theta_star)):
+                if reset_probabilities[j] < (1 - self._kappa):
+                    theta_star[j] = theta_t[j]
 
-                    #calculate fitness values for both
-                    #TODO how to choose theta, can we just reuse the old weight(?)
-                    proposal_fitness = self.calculate_fitness(theta_star, delta, d)
-                    previous_fitness = self.calculate_fitness(theta_t, delta, self.distances[it-1,pool,i])
+            # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
+            if self.priors.pdf(theta_star) > 0:
+                self.mh_step(it, group, i, theta_star)
 
-                    MH_prob = min(1, proposal_fitness / previous_fitness)
-                    u = np.random.uniform(0,1)
-                    
-                    if u < MH_prob:
-                        self._thetas[it,pool,i,:] = theta_star
-                        self._distances[it,pool,i] = d
-                        self._weights[it,pool,i] = proposal_fitness
-                    else:
-                        self._thetas[it,pool,i,:] = theta_t 
-                        self._distances[it,pool,i] = distances[it-1,pool,i]
-                        self._weights[it,pool,i] = previous_fitness
+            break
 
-                    break
-        return 
-            
-    def mutate(self,it,pool):
-        #TODO: is this really the best method to choose the step_size(?)
-        self._sigmas[it,pool,:] = 2 * np.cov(self._thetas[it-1, pool, : , :].T, aweights=self._weights[it-1,pool,:])
+
+    def mutate( self, it, group ):
+        """ This slightly perturbs each particle within a group using a perturbation kernel (mv-gaussian)"""
+        # TODO: is this really the best method to choose the step_size(?)
+        self._sigmas[it, group, :] = 2 * np.cov(self._particles[it - 1, group].T, aweights=self._weights[it - 1, group, :])
+        sigma = self._sigmas[it, group, :]
 
         for i in range(self._pool_size):
             while True:
-                #TODO figure out if we need this step_size, or we can calculate spme variance based on particles as in SMC?
-                theta_star = np.atleast_1d(ss.multivariate_normal(self._thetas[it-1,pool,:], sigma, allow_singular=True).rvs()) 
-                theta_old  = self._thetas[it-1,pool,i,:]
+                theta_old = self._particles[it - 1, group, i, :]
+                theta_star = np.atleast_1d(ss.multivariate_normal(theta_old, sigma, allow_singular=True).rvs())
 
-                #make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
+                # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
                 if self.priors.pdf(theta_star) > 0:
-                    Y = self.simulator(*(np.atleast_1d(theta_star)))  # unpack thetas as single arguments for simulator
-                    stats_y = flatten_function(self,summaries, Y)
-                    d = self.distance(self._stats_x, stats_y)
+                    self.mh_step(it, group, i, theta_star)
 
-                    #only change the delta parameter during burnin
-                    #TODO how to estimate posterior distribution of delta(?) 
-
-                    if self.sampling_mode == 'burnin':
-                        delta = np.random.exponential(20)
-                    else: 
-                        delta = self.delta 
-
-                    proposal_fitness = self.calculate_fitness(theta_star, delta, d)
-                    previous_fitness = self.calculate_fitness(theta_old, delta, self.distances[it-1,pool,i])
-
-                    #calculate MH probability
-                    MH_prob = min(1,proposal_fitness / previous_fitness)
-
-                    u = np.random.uniform(0,1)
-
-                    if u < MH_prob:
-                        self._thetas[it,pool,i,:] = theta_star
-                        self._distances[it,pool,i] = d
-                        self._weights[it,pool,i] = proposal_fitness
-
-                    else:
-                        self._thetas[it,pool,i,:] = theta_t 
-                        self._distances[it,pool,i] = distances[it-1,pool,i - 1]
-                        self._weights[it,pool,i] = previous_fitness
-
-                    break
-
-        return 
+                break
 
 
-    def migrate(self,it):
-
-        K = np.random.randint(1,self._nr_groups)
+    def migrate( self, it ):
+        """Migrate between the groups such as to diversify them, this happens by choosing K groups and cycling the weakest particle to the neighbouring group"""
+        K = np.random.randint(1, self._nr_groups + 1)  # how many groups
         groups = np.arange(self._nr_groups)
         np.random.shuffle(groups)
-        groups = groups[0:K]
-        
-        #setup arrays to temporarily store the indices of the particles we want to swap
-        weak_particles_idx = [None] * K
+        groups = groups[:K]  # which groups
 
-        #first choose all the weak_particles by their inverse of their weights and store their index
-        for i in range(K):
-            curr_group = groups[i]
-            #normalize thee group weights
-            #TODO do this somewhere else 
-            group_weights = 1 / (self.weights[it-1,curr_group,:]+1) #dont divide by zero so add bias(?)
-            group_weights = group_weights  / sum(group_weights)
-            print(group_weights)
-            weak_particles_idx[i] = np.random.choice(np.arange(0,self._pool_size), p = group_weights)
+        # setup arrays to temporarily store the indices of the particles we want to swap
+        weak_particles_idx = []
 
+        # first choose all the weak_particles by their inverse of their weights and store their index
+        for g in groups:
+            # normalize the inverse group weights
+            group_weights = 1 / (self.weights[it - 1, g, :] + 1e-12)  # dont divide by zero so add bias(?)
+            group_weights = group_weights / np.sum(group_weights)
+            weak_particles_idx.append(np.random.choice(np.arange(self._pool_size), p=group_weights))
 
-        #close the cycle by setting the first particles to the last
-        previous_theta = self.thetas[it-1,groups[0],weak_particles_idx[0]] 
-        previous_weight = self.weights[it-1,groups[0],weak_particles_idx[0]] 
+        # store weakest theta from first group
+        previous_theta = self._particles[it - 1, groups[0], weak_particles_idx[0]]
+        previous_weight = self._weights[it - 1, groups[0], weak_particles_idx[0]]
 
-        self.thetas[it-1,groups[0],weak_particles_idx[0]] = thetas[groups[K-1],weak_particles_idx[K-1]] 
-        self.weights[it-1,groups[0],weak_particles_idx[0]] = weights[groups[K-1],weak_particles_idx[K-1]] 
+        # close the cycle by setting the weakest particle from the first group to the last,
+        self._particles[it - 1, groups[0], weak_particles_idx[0]] = self._particles[groups[-1], weak_particles_idx[-1]]
+        self._weights[it - 1, groups[0], weak_particles_idx[0]] = self._weights[groups[-1], weak_particles_idx[-1]]
 
-        for i in np.arange(1,K):
-            curr_group = groups[i]
-            
-            #temporarily store our particles before we overwrite them with the previous 
-            temp_theta = self.thetas[it-1,curr_group,weak_particles_idx[i]]
-            temp_weight =  self.weights[it-1,curr_group,weak_particles_idx[i]]
+        # for groups 2 to end, swap thetas in cyclic fashion
+        for g, weak_idx in zip(groups[1:], weak_particles_idx[1:]):
+            # temporarily store our particles before we overwrite them with the previous
+            temp_theta = self._particles[it - 1, g, weak_idx]
+            temp_weight = self._weights[it - 1, g, weak_idx]
 
-            self,thetas[it-1,curr_group,weak_particles_idx[i]] = previous_theta
-            self.weights[it-1,curr_group,weak_particles_idx[i]] = previous_weight
+            self._particles[it - 1, g, weak_idx] = previous_theta
+            self._weights[it - 1, g, weak_idx] = previous_weight
 
-            previous_theta = temp_theta 
+            previous_theta = temp_theta
             previous_weight = temp_weight
 
-        return
 
+    def init_thetas( self ):
+        """initialize theta from prior for each group"""
 
-    def init_thetas(self,t): 
         for i in range(self._nr_groups):
-            self._thetas[t,i,:,:] = self.priors.sample(self._pool_size)
+            self._particles[0, i, :, :] = self.priors.sample(self._pool_size)
             for j in range(self._pool_size):
-                curr_theta = self._thetas[t,i,j,:]
-                Y = self.simulator(*(np.atleast_1d(curr_theta)))  # unpack thetas as single arguments for simulator
+                curr_theta = self._particles[0, i, j, :]
+
+                Y = self.simulator(*(np.atleast_1d(curr_theta[:-1])))  # unpack thetas as single arguments for simulator
                 stats_y = flatten_function(self.summaries, Y)
                 d = self.distance(self._stats_x, stats_y)
-                #TODO which delta to use(?)
-                self._weights[t,i,j] = self.calculate_fitness(curr_theta, 1, d)
-                self._distances[t,i,j] = d 
-            #normalize weights within pool
-            self._weights[t,i,:] = self._weights[t,i,:] / sum(self._weights[t,i,:])
+
+                self._weights[0, i, j] = self.calculate_fitness(curr_theta, d)  # TODO: different deltas necessary?
+                self._distances[0, i, j] = d
+                # normalize weights within pool
+            self._weights[0, i, :] = self._weights[0, i, :] / sum(self._weights[0, i, :])
 
 
-    def _run_ABCDE_sampling(self, nr_samples, nr_groups, nr_iterations):
+    def _run_ABCDE_sampling( self, nr_samples, nr_iterations ):
         X = self.observation
         self._stats_x = flatten_function(self.summaries, X)
-        num_priors = len(self.priors) 
+        num_priors = len(self.priors)
         T = nr_iterations
 
-        #TODO, how do we want to calculate our iterations(?)
-        nr_iter = 0
-
-        #TODO make these decision tuning parameters arguments of the sampler 
-        #In practice, the ‘‘decision’’ tuning parameters will be small 
-        #(e.g., α = β = 0.10), such that a majority of the particle updates are done in the DE Crossover Step
-        alpha = 0.1
-        beta = 0.1 
-        self.k = 0.9 
-
-        self._nr_groups = nr_groups
-        self._pool_size = int(nr_samples / nr_groups)
-        self._sampling_mode = 'burnin'        
+        self._sampling_mode = 'burnin'
 
         # create a large array to store all particles (THIS CAN BE VERY MEMORY INTENSIVE) - work with current/previous if too hard on memory
         # make this a class variable, so we can perform all operations in place and dont have to pass new arguments
-        self._thetas = np.zeros((T,self._nr_groups, self._pool_size, num_priors))
-        self._weights = np.zeros((T,self._nr_groups, self._pool_size))
+        # TODO: only previous and current theta
+        self._particles = np.zeros((T, self._nr_groups, self._pool_size,
+                                    num_priors + 1))  # number of model parameters plus delta for psi distribution
+        self._weights = np.zeros((T, self._nr_groups, self._pool_size))
         self._sigmas = np.zeros((T, self._nr_groups, self._pool_size))
-        self._distances = np.zeros((T,self._nr_groups, self._pool_size))
-
-        #set this here 
-        self._nr_iter = 0
+        self._distances = np.zeros((T, self._nr_groups, self._pool_size))
+        self._group_deltas = np.zeros(self._nr_groups)
 
         start = time.clock()
 
@@ -273,44 +252,41 @@ class ABCDESampler(BaseSampler):
             if t == 0:
                 if self.verbosity:
                     print('initializing pools')
-                self.init_thetas(t)
+                self.init_thetas()
 
-            else:             
+            else:
                 if self.verbosity:
-                    print('starting iteration[', t, ']')
+                    print('starting iteration[ %4t ]' % (t))
 
-                #TODO make this a parameter of the sampler 
-                if t > 100:
+                if t == self._burnin:
                     self._sampling_mode = 'sample'
-                    self._delta = 0.3
+                    # after burn in find min delta of each group
+                    for g in range(self._nr_groups):
+                        self._group_deltas[g] = self._particles[:t, g, :, -1].min()
 
-                p1 = np.random.uniform(0,1)
+                p1 = np.random.uniform(0, 1)
 
-                if p1 < alpha:
-                    #Migrate between the groups such as to diversify them, this happens by choosing n groups and cycling the weakest particle to the neighbouring group
-                    self.migrate(t) 
+                if p1 < self._alpha:
+                    # Migrate between the groups such as to diversify them, this happens by choosing n groups and cycling the weakest particle to the neighbouring group
+                    self.migrate(t)
 
-                #for each pool of particles do the following:
+                    # for each pool of particles do the following:
                 for i in range(self._nr_groups):
-                    p2 = np.random.uniform(0,1)   
-                    if p2 < beta: 
-                        #This slightly perturbs each particle within a group using a perturbation kernel (mv-gaussian)
-                        self.mutate(t,i)
+                    p2 = np.random.uniform(0, 1)
+                    if p2 < self._beta:
+                        # This slightly perturbs each particle within a group using a perturbation kernel (mv-gaussian)
+                        self.mutate(t, i)
                     else:
-                        #This generates new particles, by operating in the vector space of thetas for a particular particle cluster
-                        self.crossover(t,i)
-
+                        # This generates new particles, by operating in the vector space of thetas for a particular particle cluster
+                        self.crossover(t, i)
 
         self._runtime = time.clock() - start
-        self._nr_iter = nr_iter
-        self._acceptance_rate = nr_samples / self.nr_iter
-        self._weights = weights
-        self._Thetas = thetas[T - 1, :, :]
-        self._distances = distances
+        self._Thetas = self._thetas[-1, :, :]
 
-        return thetas[T - 1, :, :]
+        return self._Thetas
 
-    def _reset(self):
-        """reset class properties for a new call of sample method"""
-        self._nr_iter = 0
-        self._Thetas = np.empty(0)
+
+        def _reset( self ):
+            """reset class properties for a new call of sample method"""
+            self._nr_iter = 0
+            self._Thetas = np.empty(0)
