@@ -67,7 +67,7 @@ class ABCDESampler(BaseSampler):
 
         print("ABC-Differential-Evolution sampler started with number of samples: {}".format(nr_samples))
 
-        self._reset(nr_iter, len(self.priors))
+        self._reset()
         self._run_ABCDE_sampling()
 
         if self.verbosity == 1:
@@ -268,13 +268,13 @@ class ABCDESampler(BaseSampler):
         return self._Thetas
 
 
-    def _reset( self, T, num_priors ):
+    def _reset( self):
         """reset class properties for a new call of sample method"""
 
         # TODO: only previous and current theta
-        self._particles = np.zeros((T, self._nr_groups, self._pool_size,
-                                    num_priors + 1))  # number of model parameters plus delta for psi distribution
-        self._weights = np.zeros((T, self._nr_groups, self._pool_size))
-        self._sigmas = np.zeros((T, self._nr_groups, self._pool_size))
-        self._distances = np.zeros((T, self._nr_groups, self._pool_size))
+        self._particles = np.zeros((self.nr_iter, self._nr_groups, self._pool_size,
+                                    self._nr_priors))  # number of model parameters plus delta for psi distribution
+        self._weights = np.zeros((self.nr_iter, self._nr_groups, self._pool_size))
+        self._sigmas = np.zeros((self.nr_iter, self._nr_groups, self._pool_size))
+        self._distances = np.zeros((self.nr_iter, self._nr_groups, self._pool_size))
         self._group_deltas = np.zeros(self._nr_groups)
