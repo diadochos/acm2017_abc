@@ -22,16 +22,16 @@ class ABCDESampler(BaseSampler):
         return self._threshold
 
 
-    def __init__( self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None ):
+    def __init__( self, priors, simulator, observation, summaries, exp_lambda = 20, distance='euclidean', verbosity=1, seed=None ):
         # call BaseSampler __init__
         # extend list of priors by prior for delta
-        exponential_prior = pyabc.Prior('expon', self._exp_lambda)
+        exponential_prior = pyabc.Prior('expon', exp_lambda)
         priors.append(exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
         self._nr_priors = len(self.priors)
 
 
-    def sample( self, nr_iter, nr_samples, nr_groups, burn_in, alpha=0.1, beta=0.1, kappa=0.9, exp_lambda=20 ):
+    def sample( self, nr_iter, nr_samples, nr_groups, burn_in, alpha=0.1, beta=0.1, kappa=0.9):
         """Draw samples using the genetic ABCDE Algorithm
 
         Args:
@@ -58,7 +58,6 @@ class ABCDESampler(BaseSampler):
         self._alpha = alpha
         self._beta = beta
         self._kappa = kappa
-        self._exp_lambda = exp_lambda
 
         self._nr_groups = nr_groups
         self._pool_size = int(nr_samples / nr_groups)  # number of particles per group
