@@ -59,13 +59,14 @@ class ABCDESampler(BaseSampler):
         self._beta = beta
         self._kappa = kappa
 
+        self.nr_iter = nr_iter
         self._nr_groups = nr_groups
         self._pool_size = int(nr_samples / nr_groups)  # number of particles per group
 
         print("ABC-Differential-Evolution sampler started with number of samples: {}".format(nr_samples))
 
         self._reset(nr_iter, len(self.priors))
-        self._run_ABCDE_sampling(nr_samples, nr_groups, nr_iter)
+        self._run_ABCDE_sampling()
 
         if self.verbosity == 1:
             print("Samples: %6d - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
@@ -218,7 +219,7 @@ class ABCDESampler(BaseSampler):
             self._weights[0, i, :] = self._weights[0, i, :] / sum(self._weights[0, i, :])
 
 
-    def _run_ABCDE_sampling( self, nr_samples, nr_iterations ):
+    def _run_ABCDE_sampling( self):
         X = self.observation
         self._stats_x = flatten_function(self.summaries, X)
 
@@ -226,7 +227,7 @@ class ABCDESampler(BaseSampler):
 
         start = time.clock()
 
-        for t in range(nr_iterations):
+        for t in range(self.nr_iter):
             # init particle pools by simply sampling from the prior for each pool
             if t == 0:
                 if self.verbosity:
