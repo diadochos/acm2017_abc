@@ -25,7 +25,9 @@ class ABCDESampler(BaseSampler):
     def __init__( self, priors, simulator, observation, summaries, exp_lambda = 20, distance='euclidean', verbosity=1, seed=None ):
         # call BaseSampler __init__
         # extend list of priors by prior for delta
-        exponential_prior = pyabc.Prior('expon', exp_lambda)
+        exponential_prior = pyabc.Prior('expon', 0, 1/exp_lambda, name="delta")
+        if not isinstance(priors, list):
+            priors = [priors]
         priors.append(exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
         self._nr_priors = len(self.priors)
