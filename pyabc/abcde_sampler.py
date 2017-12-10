@@ -81,9 +81,8 @@ class ABCDESampler(BaseSampler):
 
         error_distribution = ss.norm(0, curr_theta[
             -1])  # delta is always last entry of theta vector and after burn in equals group delta
-        fitness = self.priors.logpdf(curr_theta) + error_distribution.logpdf(distance)
-        if np.isnan(fitness):
-            print("nan in calculate fitness", self.priors.logpdf(curr_theta), error_distribution.logpdf(distance))
+        fitness = self.priors.pdf(curr_theta) * error_distribution.pdf(distance)
+
         return fitness
 
 
@@ -106,7 +105,7 @@ class ABCDESampler(BaseSampler):
             print("nan:", theta_star, d, it, group)
 
         # calculate MH probability
-        MH_prob = min(1, np.exp(proposal_fitness) / np.exp(previous_fitness))
+        MH_prob = min(1, proposal_fitness / previous_fitness)
         u = np.random.uniform(0, 1)
 
         if u < MH_prob:
@@ -154,7 +153,7 @@ class ABCDESampler(BaseSampler):
 
                 # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
                 if self.priors.pdf(theta_star) > 0:
-                    print("crossover: ", theta_star)
+                    #print("crossover: ", theta_star)
                     self.mh_step(it, group, i, theta_star)
 
                 break
@@ -195,9 +194,10 @@ class ABCDESampler(BaseSampler):
         # first choose all the weak_particles by their inverse of their weights and store their index
         for g in groups:
             # normalize the inverse group weights
-            #group_weights = 1 / np.exp(self.weights[it - 1, g, :] + 1e-12)  # dont divide by zero so add bias(?)
-            #group_weights = group_weights / np.sum(group_weights)
-            weak_particles_idx.append(np.random.choice(np.arange(self._pool_size), p=self._weights[it - 1, g]))
+            group_weights = 1 / (self.weights[it - 1, g, :] + 1e-12)  # dont divide by zero so add bias(?)
+            group_weights = group_weights / np.sum(group_weights)
+            #weak_particles_idx.append(np.random.choice(np.arange(self._pool_size), p=self._weights[it - 1, g]))
+            weak_particles_idx.append(np.random.choice(np.arange(self._pool_size), p=group_weights))
 
         # store all weakest thetas
         list_of_weak_thetas_and_weights = []
@@ -226,7 +226,7 @@ class ABCDESampler(BaseSampler):
                 stats_y = flatten_function(self.summaries, Y)
                 d = self.distance(self._stats_x, stats_y)
 
-                self._weights[0, i, j] = self.calculate_fitness(curr_theta, d) # TODO: different deltas necessary?
+                self._weights[0, i, j] = self.calculate_fitness(curr_theta, d) + 1e-8 # TODO: different deltas necessary?
                 self._distances[0, i, j] = d
                 # normalize weights within pool
             self._weights[0, i, :] = self._weights[0, i, :] / sum(self._weights[0, i, :])
