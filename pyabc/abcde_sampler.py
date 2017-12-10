@@ -69,7 +69,7 @@ class ABCDESampler(BaseSampler):
         print("ABC-Differential-Evolution sampler started with number of samples: {}".format(nr_samples))
 
         self._reset()
-        self._run_ABCDE_sampling()
+        self._run_ABCDE_sampling(nr_samples)
 
         if self.verbosity == 1:
             print("Samples: %6d - Iterations: %10d - Acceptance rate: None - Time: %8.2f s" % (
@@ -227,7 +227,7 @@ class ABCDESampler(BaseSampler):
             self._weights[0, i, :] = self._weights[0, i, :] / sum(self._weights[0, i, :])
 
 
-    def _run_ABCDE_sampling( self):
+    def _run_ABCDE_sampling( self, nr_samples):
         X = self.observation
         self._stats_x = flatten_function(self.summaries, X)
 
@@ -244,9 +244,9 @@ class ABCDESampler(BaseSampler):
 
             else:
                 if self.verbosity == 2:
-                    print('starting iteration[{}]'.format(t))
+                    print('starting iteration [ {} ]'.format(t))
                 elif t % 100 == 0:
-                    print('starting iteration[{}]'.format(t))
+                    print('starting iteration [ {} ]'.format(t))
 
                 if t == self._burn_in:
                     self._sampling_mode = 'sample'
@@ -273,7 +273,8 @@ class ABCDESampler(BaseSampler):
                     self._weights[t, i, :] = self._weights[t, i, :] / sum(self._weights[t, i, :])
 
         self._runtime = time.clock() - start
-        self._Thetas = self._particles[-1, :, :]
+        self._threshold = self._group_deltas.min()
+        self._Thetas = self._particles[-1, :, :, :-1].flatten().reshape(nr_samples, self._nr_priors - 1)
 
         return self._Thetas
 
