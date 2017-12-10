@@ -40,7 +40,7 @@ class ABCDESampler(BaseSampler):
             nr_iter: Number of iterations of the algorithm
             nr_groups: Number of population pools
             nr_samples: Number of samples we want to obtain from theta posterior
-  			burn_in: Number of iterations in 'burnin' phase
+  			burn_in: Number of iterations in 'burn_in' phase
             alpha: Probability to do the migration step
             beta: Probability to do the mutation step
             kappa: Probability to keep the newly generated theta component
@@ -62,6 +62,7 @@ class ABCDESampler(BaseSampler):
         self._kappa = kappa
 
         self._nr_iter = nr_iter
+        self._burn_in = burn_in
         self._nr_groups = nr_groups
         self._pool_size = int(nr_samples / nr_groups)  # number of particles per group
 
@@ -93,7 +94,7 @@ class ABCDESampler(BaseSampler):
         stats_y = flatten_function(self.summaries, Y)
         d = self.distance(self._stats_x, stats_y)
 
-        # only change the delta parameter during burnin and take the groups delta during sample mode
+        # only change the delta parameter during burn_in and take the groups delta during sample mode
         if self._sampling_mode == 'sample':
             theta_star[-1] = self._group_deltas[group]
 
@@ -121,7 +122,7 @@ class ABCDESampler(BaseSampler):
                 # choose params we use for linear combination
                 y1 = np.random.uniform(0.5, 1)
                 y2 = 0
-                if self._sampling_mode == 'burnin':
+                if self._sampling_mode == 'burn_in':
                     y2 = np.random.uniform(0.5, 1)
                 b = np.random.uniform(-0.001, 0.001)  # TODO make this a model parameter(?)
 
@@ -225,7 +226,7 @@ class ABCDESampler(BaseSampler):
         X = self.observation
         self._stats_x = flatten_function(self.summaries, X)
 
-        self._sampling_mode = 'burnin'
+        self._sampling_mode = 'burn_in'
 
         start = time.clock()
 
@@ -240,7 +241,7 @@ class ABCDESampler(BaseSampler):
                 if self.verbosity:
                     print('starting iteration[ %4d ]' % (t))
 
-                if t == self._burnin:
+                if t == self._burn_in:
                     self._sampling_mode = 'sample'
                     # after burn in find min delta of each group
                     for g in range(self._nr_groups):
