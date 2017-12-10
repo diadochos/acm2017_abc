@@ -243,8 +243,10 @@ class ABCDESampler(BaseSampler):
                 self.init_thetas()
 
             else:
-                if self.verbosity:
-                    print('starting iteration[ %4d ]' % (t))
+                if self.verbosity == 2:
+                    print('starting iteration[{}]'.format(t))
+                elif t % 100 == 0:
+                    print('starting iteration[{}]'.format(t))
 
                 if t == self._burn_in:
                     self._sampling_mode = 'sample'
