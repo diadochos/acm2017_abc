@@ -24,6 +24,9 @@ class ABCDESampler(BaseSampler):
 
     def __init__( self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None ):
         # call BaseSampler __init__
+        # extend list of priors by prior for delta
+        exponential_prior = pyabc.Prior('expon', self._exp_lambda)
+        priors.append(exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
         self._nr_priors = len(self.priors)
 
@@ -265,14 +268,6 @@ class ABCDESampler(BaseSampler):
 
     def _reset( self, T, num_priors ):
         """reset class properties for a new call of sample method"""
-
-        # extend list of priors by prior for delta
-        if len(self.priors) > self._nr_priors:
-            self.priors = self.prios[:self._nr_priors]
-
-        exponential_prior = pyabc.Prior('expon', self._exp_lambda)
-        self.priors = self.priors.append(
-            exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
 
         # TODO: only previous and current theta
         self._particles = np.zeros((T, self._nr_groups, self._pool_size,
