@@ -188,25 +188,18 @@ class ABCDESampler(BaseSampler):
             group_weights = group_weights / np.sum(group_weights)
             weak_particles_idx.append(np.random.choice(np.arange(self._pool_size), p=group_weights))
 
-        # store weakest theta from first group
-        previous_theta = self._particles[it - 1, groups[0], weak_particles_idx[0]]
-        previous_weight = self._weights[it - 1, groups[0], weak_particles_idx[0]]
+        # store all weakest thetas
+        list_of_weak_thetas_and_weights = []
+        for g, idx in zip(groups, weak_particles_idx):
+            list_of_weak_thetas_and_weights.append(
+                (self._particles[it - 1, g, idx], self._weights[it - 1, g, idx])
+            )
 
-        # close the cycle by setting the weakest particle from the first group to the last,
-        self._particles[it - 1, groups[0], weak_particles_idx[0]] = self._particles[groups[-1], weak_particles_idx[-1]]
-        self._weights[it - 1, groups[0], weak_particles_idx[0]] = self._weights[groups[-1], weak_particles_idx[-1]]
-
-        # for groups 2 to end, swap thetas in cyclic fashion
-        for g, weak_idx in zip(groups[1:], weak_particles_idx[1:]):
+        # overwrite each weakest theta and weight with the weakest theta and weight from the next grp
+        for idx, g, weak_idx in zip(range(K), groups, weak_particles_idx):
             # temporarily store our particles before we overwrite them with the previous
-            temp_theta = self._particles[it - 1, g, weak_idx]
-            temp_weight = self._weights[it - 1, g, weak_idx]
-
-            self._particles[it - 1, g, weak_idx] = previous_theta
-            self._weights[it - 1, g, weak_idx] = previous_weight
-
-            previous_theta = temp_theta
-            previous_weight = temp_weight
+            self._particles[it - 1, g, weak_idx] = list_of_weak_thetas_and_weights[idx - 1][0]
+            self._weights[it - 1, g, weak_idx] = list_of_weak_thetas_and_weights[idx - 1][1]
 
 
     def init_thetas( self ):
