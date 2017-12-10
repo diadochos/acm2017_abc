@@ -72,8 +72,8 @@ class ABCDESampler(BaseSampler):
         self._run_ABCDE_sampling()
 
         if self.verbosity == 1:
-            print("Samples: %6d - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
-                nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
+            print("Samples: %6d - Iterations: %10d - Acceptance rate: None - Time: %8.2f s" % (
+                nr_samples, self.nr_iter, self.runtime))
 
 
     def calculate_fitness( self, curr_theta, distance ):
@@ -153,10 +153,13 @@ class ABCDESampler(BaseSampler):
 
                 # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
                 if self.priors.pdf(theta_star) > 0:
+                    if theta_star[2] == 0:
+                        print("it: ", it)
+                        print("d == 0", theta_star)
                     #print("crossover: ", theta_star)
                     self.mh_step(it, group, i, theta_star)
 
-                break
+                    break
 
 
     def mutate( self, it, group ):
@@ -278,7 +281,7 @@ class ABCDESampler(BaseSampler):
                     self._weights[t, i, :] = self._weights[t, i, :] / sum(self._weights[t, i, :])
 
         self._runtime = time.clock() - start
-        self._Thetas = self._thetas[-1, :, :]
+        self._Thetas = self._particles[-1, :, :]
 
         return self._Thetas
 
