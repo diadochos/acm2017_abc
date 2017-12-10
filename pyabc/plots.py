@@ -49,7 +49,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
             plt.legend(loc="upper right")
 
         fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
-            np.round(threshold, 2),
+            np.round(threshold, 4),
             sampler.Thetas.shape[0]
         ), y=0.96)
 

@@ -53,7 +53,7 @@ def numpy_sampler_from_str(name, *args):
             # from scipy to numpy format
             return partial(np_function, args[0], args[0] + args[1])
         elif name == 'exponential':
-            # add the the loc parameter
+            # add the loc parameter
             return lambda size: np_function(args[1], size=size) + args[0]
         elif name == 'gamma':
             return lambda size: np_function(args[0], args[2], size=size) + args[1]
