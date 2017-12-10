@@ -202,6 +202,7 @@ class ABCDESampler(BaseSampler):
             # temporarily store our particles before we overwrite them with the previous
             self._particles[it - 1, g, weak_idx] = list_of_weak_thetas_and_weights[idx - 1][0]
             self._weights[it - 1, g, weak_idx] = list_of_weak_thetas_and_weights[idx - 1][1]
+            self._weights[it - 1, g, :] = self._weights[it - 1, g, :] / np.sum(self._weights[it - 1, g, :])
 
 
     def init_thetas( self ):
@@ -262,6 +263,8 @@ class ABCDESampler(BaseSampler):
                     else:
                         # This generates new particles, by operating in the vector space of thetas for a particular particle cluster
                         self.crossover(t, i)
+
+                    self._weights[t, i, :] = self._weights[t, i, :] / sum(self._weights[t, i, :])
 
         self._runtime = time.clock() - start
         self._Thetas = self._thetas[-1, :, :]
