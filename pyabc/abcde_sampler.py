@@ -25,7 +25,7 @@ class ABCDESampler(BaseSampler):
     def __init__( self, priors, simulator, observation, summaries, exp_lambda = 20, distance='euclidean', verbosity=1, seed=None ):
         # call BaseSampler __init__
         # extend list of priors by prior for delta
-        exponential_prior = pyabc.Prior('expon', 0, 1/exp_lambda, name="delta")
+        exponential_prior = pyabc.Prior('expon', 1e-8, 1/exp_lambda, name="delta")
         if not isinstance(priors, list):
             priors = [priors]
         priors.append(exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
@@ -82,7 +82,8 @@ class ABCDESampler(BaseSampler):
         error_distribution = ss.norm(0, curr_theta[
             -1])  # delta is always last entry of theta vector and after burn in equals group delta
         fitness = self.priors.logpdf(curr_theta) + error_distribution.logpdf(distance)
-
+        if np.isnan(fitness):
+            print("nan in calculate fitness", self.priors.logpdf(curr_theta), error_distribution.logpdf(distance))
         return fitness
 
 
@@ -153,6 +154,7 @@ class ABCDESampler(BaseSampler):
 
                 # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
                 if self.priors.pdf(theta_star) > 0:
+                    print("crossover: ", theta_star)
                     self.mh_step(it, group, i, theta_star)
 
                 break
@@ -174,6 +176,7 @@ class ABCDESampler(BaseSampler):
 
                 # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
                 if self.priors.pdf(theta_star) > 0:
+                    print("mutate: ", theta_star)
                     self.mh_step(it, group, i, theta_star)
 
                 break
