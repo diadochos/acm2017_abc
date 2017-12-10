@@ -238,7 +238,7 @@ class ABCDESampler(BaseSampler):
 
             else:
                 if self.verbosity:
-                    print('starting iteration[ %4t ]' % (t))
+                    print('starting iteration[ %4d ]' % (t))
 
                 if t == self._burnin:
                     self._sampling_mode = 'sample'
