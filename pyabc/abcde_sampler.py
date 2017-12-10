@@ -276,6 +276,6 @@ class ABCDESampler(BaseSampler):
         self._particles = np.zeros((self.nr_iter, self._nr_groups, self._pool_size,
                                     self._nr_priors))  # number of model parameters plus delta for psi distribution
         self._weights = np.zeros((self.nr_iter, self._nr_groups, self._pool_size))
-        self._sigmas = np.zeros((self.nr_iter, self._nr_groups, self._pool_size))
+        self._sigmas = np.zeros((self.nr_iter, self._nr_groups, self._nr_priors, self._nr_priors))
         self._distances = np.zeros((self.nr_iter, self._nr_groups, self._pool_size))
         self._group_deltas = np.zeros(self._nr_groups)
