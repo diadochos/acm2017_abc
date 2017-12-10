@@ -124,29 +124,29 @@ class ABCDESampler(BaseSampler):
                 # get indices for all particles
                 idx_b = np.random.choice(np.arange(self._pool_size), p=self._weights[it - 1, group, :])
                 idx_all = np.arange(self._pool_size)
-            idx_all = np.delete(idx_all, [i, idx_b])
-            idx_m, idx_n = np.random.choice(idx_all, 2)
+                idx_all = np.delete(idx_all, [i, idx_b])
+                idx_m, idx_n = np.random.choice(idx_all, 2)
 
-            # get the 3 theta vectors used for crossover
-            theta_t = self._particles[it - 1, group, i]
-            theta_b = self._particles[it - 1, group, idx_b]  # base_particle
-            theta_m = self._particles[it - 1, group, idx_m]
-            theta_n = self._particles[it - 1, group, idx_n]
+                # get the 3 theta vectors used for crossover
+                theta_t = self._particles[it - 1, group, i]
+                theta_b = self._particles[it - 1, group, idx_b]  # base_particle
+                theta_m = self._particles[it - 1, group, idx_m]
+                theta_n = self._particles[it - 1, group, idx_n]
 
-            # find a new theta, as a linear combination in the vector space of thetas within the cluster
-            theta_star = theta_t + y1 * (theta_m - theta_n) + y2 * (theta_b - theta_t) + b
+                # find a new theta, as a linear combination in the vector space of thetas within the cluster
+                theta_star = theta_t + y1 * (theta_m - theta_n) + y2 * (theta_b - theta_t) + b
 
-            # keep some of the old features with probability (1-k)
-            reset_probabilities = np.random.uniform(0, 1, size=len(theta_star))
-            for j in range(len(theta_star)):
-                if reset_probabilities[j] < (1 - self._kappa):
-                    theta_star[j] = theta_t[j]
+                # keep some of the old features with probability (1-k)
+                reset_probabilities = np.random.uniform(0, 1, size=len(theta_star))
+                for j in range(len(theta_star)):
+                    if reset_probabilities[j] < (1 - self._kappa):
+                        theta_star[j] = theta_t[j]
 
-            # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
-            if self.priors.pdf(theta_star) > 0:
-                self.mh_step(it, group, i, theta_star)
+                # make sure we found a great theta that works with our prior and then we can simulate and see how well it fits the data
+                if self.priors.pdf(theta_star) > 0:
+                    self.mh_step(it, group, i, theta_star)
 
-            break
+                break
 
 
     def mutate( self, it, group ):
