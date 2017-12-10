@@ -59,7 +59,7 @@ class ABCDESampler(BaseSampler):
         self._beta = beta
         self._kappa = kappa
 
-        self.nr_iter = nr_iter
+        self._nr_iter = nr_iter
         self._nr_groups = nr_groups
         self._pool_size = int(nr_samples / nr_groups)  # number of particles per group
 
