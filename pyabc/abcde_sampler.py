@@ -181,7 +181,7 @@ class ABCDESampler(BaseSampler):
                     print("mutate: ", theta_star)
                     self.mh_step(it, group, i, theta_star)
 
-                break
+                    break
 
 
     def migrate( self, it ):
