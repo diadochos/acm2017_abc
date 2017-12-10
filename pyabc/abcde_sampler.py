@@ -25,6 +25,7 @@ class ABCDESampler(BaseSampler):
     def __init__( self, priors, simulator, observation, summaries, distance='euclidean', verbosity=1, seed=None ):
         # call BaseSampler __init__
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
+        self._nr_priors = len(self.priors)
 
 
     def sample( self, nr_iter, nr_samples, nr_groups, burn_in, alpha=0.1, beta=0.1, kappa=0.9, exp_lambda=20 ):
@@ -56,17 +57,12 @@ class ABCDESampler(BaseSampler):
         self._kappa = kappa
         self._exp_lambda = exp_lambda
 
-        # extend list of priors by prior for delta
-        exponential_prior = pyabc.Prior('expon', exp_lambda)
-        self.priors = self.priors.append(
-            exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
-
         self._nr_groups = nr_groups
         self._pool_size = int(nr_samples / nr_groups)  # number of particles per group
 
         print("ABC-Differential-Evolution sampler started with number of samples: {}".format(nr_samples))
 
-        self._reset()
+        self._reset(nr_iter, len(self.priors))
         self._run_ABCDE_sampling(nr_samples, nr_groups, nr_iter)
 
         if self.verbosity == 1:
@@ -223,20 +219,8 @@ class ABCDESampler(BaseSampler):
     def _run_ABCDE_sampling( self, nr_samples, nr_iterations ):
         X = self.observation
         self._stats_x = flatten_function(self.summaries, X)
-        num_priors = len(self.priors)
-        T = nr_iterations
 
         self._sampling_mode = 'burnin'
-
-        # create a large array to store all particles (THIS CAN BE VERY MEMORY INTENSIVE) - work with current/previous if too hard on memory
-        # make this a class variable, so we can perform all operations in place and dont have to pass new arguments
-        # TODO: only previous and current theta
-        self._particles = np.zeros((T, self._nr_groups, self._pool_size,
-                                    num_priors + 1))  # number of model parameters plus delta for psi distribution
-        self._weights = np.zeros((T, self._nr_groups, self._pool_size))
-        self._sigmas = np.zeros((T, self._nr_groups, self._pool_size))
-        self._distances = np.zeros((T, self._nr_groups, self._pool_size))
-        self._group_deltas = np.zeros(self._nr_groups)
 
         start = time.clock()
 
@@ -279,7 +263,21 @@ class ABCDESampler(BaseSampler):
         return self._Thetas
 
 
-        def _reset( self ):
-            """reset class properties for a new call of sample method"""
-            self._nr_iter = 0
-            self._Thetas = np.empty(0)
+    def _reset( self, T, num_priors ):
+        """reset class properties for a new call of sample method"""
+
+        # extend list of priors by prior for delta
+        if len(self.priors) > self._nr_priors:
+            self.priors = self.prios[:self._nr_priors]
+
+        exponential_prior = pyabc.Prior('expon', self._exp_lambda)
+        self.priors = self.priors.append(
+            exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
+
+        # TODO: only previous and current theta
+        self._particles = np.zeros((T, self._nr_groups, self._pool_size,
+                                    num_priors + 1))  # number of model parameters plus delta for psi distribution
+        self._weights = np.zeros((T, self._nr_groups, self._pool_size))
+        self._sigmas = np.zeros((T, self._nr_groups, self._pool_size))
+        self._distances = np.zeros((T, self._nr_groups, self._pool_size))
+        self._group_deltas = np.zeros(self._nr_groups)
