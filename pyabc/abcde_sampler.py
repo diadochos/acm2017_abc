@@ -124,9 +124,7 @@ class ABCDESampler(BaseSampler):
             while True:
                 # choose params we use for linear combination
                 y1 = np.random.uniform(0.5, 1)
-                y2 = 0
-                if self._sampling_mode == 'burn_in':
-                    y2 = np.random.uniform(0.5, 1)
+                y2 = np.random.uniform(0.5, 1)
                 b = np.random.uniform(-0.001, 0.001)  # TODO make this a model parameter(?)
 
                 # index party!
@@ -143,7 +141,10 @@ class ABCDESampler(BaseSampler):
                 theta_n = self._particles[it - 1, group, idx_n]
 
                 # find a new theta, as a linear combination in the vector space of thetas within the cluster
-                theta_star = theta_t + y1 * (theta_m - theta_n) + y2 * (theta_b - theta_t) + b
+                if self._sampling_mode == 'burn_in':
+                    theta_star = theta_t + y1 * (theta_m - theta_n) + y2 * (theta_b - theta_t) + b
+                else:
+                    theta_star = theta_t + y1 * (theta_m - theta_n) + b
 
                 # keep some of the old features with probability (1-k)
                 reset_probabilities = np.random.uniform(0, 1, size=len(theta_star))
