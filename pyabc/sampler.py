@@ -66,10 +66,10 @@ class BaseSampler(metaclass=abc.ABCMeta):
     def priors(self, priors):
         """func doc"""
         priors = np.atleast_1d(priors)
-        if all(issubclass(type(p), Prior) for p in priors):
+        if all(isinstance(p, Prior) for p in priors):
             self._priors = PriorList(priors)
         else:
-            print(all(issubclass(p, Prior) for p in priors))
+            print(all(isinstance(p, Prior) for p in priors))
             raise TypeError("Passed argument {} is not a subclass of prior!".format(priors))
 
     # set and get summaries
