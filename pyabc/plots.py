@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as ss
+import itertools
 
 import pyabc
 
@@ -11,6 +12,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
     :param kde: true - use kernel density estimation function of scipy.stats to draw posterior distribution
+    :param xlim: list of xlim values for the individual marginal distributions
     :param kwargs: list of keyword arguments for kde function of scipy.stats
     """
     if sampler.Thetas.shape == (0,):
@@ -73,11 +75,105 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
     if isinstance(sampler, pyabc.SMCSampler) & plot_all:
         for epoch, threshold in enumerate(sampler.thresholds):
-            xlim = kwargs.get('xlim') or [(sampler.particles[0,:,t].min() - 0.1, sampler.particles[0,:,t].max() + 0.1)
-                                          for t
-                                          in
-                                          range(sampler.particles[0].shape[1])]
+            xlim = kwargs.get('xlim') or [
+                (sampler.particles[0, :, t].min() - 0.1, sampler.particles[0, :, t].max() + 0.1)
+                for t
+                in
+                range(sampler.particles[0].shape[1])]
             _plot_thetas(sampler.particles[epoch], threshold, xlim, ylim)
+
+
+def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, density_kwds=None, range_padding=0.05,
+               **kwargs):
+    """Plots a scatterplot matrix of subplots.  Each column of "sampler.Thetas" is plotted
+    against other columns, resulting in a ncols by ncols grid of subplots with the
+    diagonal subplots labeled with "names".  Additional keyword arguments are
+    passed on to matplotlib's "plot" command. Returns the matplotlib figure
+    object containg the subplot grid.
+    :param sampler: instance of BaseSampler
+    :param diagonal: what to plot on the diagonal (either 'hist', 'kde' or 'names')
+    :param hist_kwds: dictionary of kwargs for the call to plt.hist (when diagonal == 'hist')
+    :param density_kwds: dictionary of kwargs for the call to plt.plot for kde (when diagonal == 'kde')
+    :param range_padding: float, optional
+        relative extension of axis range in x and y
+        with respect to (x_max - x_min) or (y_max - y_min),
+        default 0.05
+    :param **kwargs: keyword arguments for the call to plt.scatter on the off-diagonal
+    """
+
+    hist_kwds = hist_kwds or {}
+    density_kwds = density_kwds or {}
+
+    if sampler.Thetas.shape == (0,):
+        raise Warning("Method was called before sampling was done")
+
+    names = sampler.priors.names
+
+    numdata, numvars = sampler.Thetas.shape
+    fig, axes = plt.subplots(nrows=numvars, ncols=numvars, figsize=(8, 8))
+    fig.subplots_adjust(hspace=0.05, wspace=0.05)
+
+    boundaries_list = []
+    for theta in sampler.Thetas.T:
+        rmin_, rmax_ = np.min(theta), np.max(theta)
+        rdelta_ext = (rmax_ - rmin_) * range_padding / 2.
+        boundaries_list.append((rmin_ - rdelta_ext, rmax_ + rdelta_ext))
+
+    for i, theta_a, name_a in zip(range(numvars), sampler.Thetas.T, names):
+        for j, theta_b, name_b in zip(range(numvars), sampler.Thetas.T, names):
+            ax = axes[i, j]
+
+            if i == j:
+                if diagonal == 'names':
+                    ax.annotate(label, (0.5, 0.5), xycoords='axes fraction',
+                                ha='center', va='center')
+
+                elif diagonal == 'hist':
+                    ax.hist(theta_a, **hist_kwds)
+
+                elif diagonal in ('kde', 'density'):
+                    y = theta_a
+                    gkde = ss.gaussian_kde(y)
+                    ind = np.linspace(y.min(), y.max(), 1000)
+                    ax.plot(ind, gkde.evaluate(ind), **density_kwds)
+
+
+            else:
+                axes[i, j].scatter(theta_b, theta_a, **kwargs)
+
+                ax.set_xlim(boundaries_list[j])
+                ax.set_ylim(boundaries_list[i])
+
+            ax.set_xlabel(name_b)
+            ax.set_ylabel(name_a)
+
+            if j != 0:
+                ax.yaxis.set_visible(False)
+            if i != numvars - 1:
+                ax.xaxis.set_visible(False)
+
+    if numvars > 1:
+        lim1 = boundaries_list[0]
+        locs = axes[0][1].yaxis.get_majorticklocs()
+        locs = locs[(lim1[0] <= locs) & (locs <= lim1[1])]
+        adj = (locs - lim1[0]) / (lim1[1] - lim1[0])
+
+        lim0 = axes[0][0].get_ylim()
+        adj = adj * (lim0[1] - lim0[0]) + lim0[0]
+        axes[0][0].yaxis.set_ticks(adj)
+
+        if np.all(locs == locs.astype(int)):
+            # if all ticks are int
+            locs = locs.astype(int)
+        axes[0][0].yaxis.set_ticklabels(locs)
+
+    fig.suptitle('Scatterplot matrix for all model parameters with\n' + r'$\rho(S(X),S(Y)) < {}, n = {}$'.format(
+        np.round(sampler.threshold, 4),
+        sampler.Thetas.shape[0]
+    ), y=0.96)
+
+    plt.show()
+    return fig
 
 
 def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True, **kwargs):
