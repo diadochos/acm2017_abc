@@ -6,7 +6,6 @@ import pyabc
 
 PLOTS_PER_ROW = 3
 
-
 def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=True, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
@@ -18,13 +17,16 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
         raise Warning("Method was called before sampling was done")
 
     def _plot_thetas(thetas, threshold, xlim=None, ylim=None):
-        nonlocal sampler, kde, nr_rows, names, kwargs
+        nonlocal sampler, kde, nr_rows, nr_plots, names, kwargs
 
         fig = plt.figure()
 
         # plot thetas of last iteration
         for plot_id, theta in enumerate(thetas.T):
-            plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id + 1)
+            if nr_plots < PLOTS_PER_ROW:
+                plt.subplot(nr_rows, 1, plot_id + 1)
+            else:
+                plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id + 1)
 
             # plot posterior
             plt.hist(theta, edgecolor="k", bins='auto', normed=normed, alpha=0.4)
