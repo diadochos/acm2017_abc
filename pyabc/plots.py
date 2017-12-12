@@ -60,6 +60,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
         plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
         plt.show()
+        return fig
 
     nr_plots = sampler.Thetas.shape[1]  # number of columns = model parameters
     nr_rows = (nr_plots // (PLOTS_PER_ROW + 1)) + 1  # has to start by one
@@ -70,7 +71,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
     xlim = kwargs.get('xlim', None)
 
     if isinstance(sampler, pyabc.BaseSampler):
-        _plot_thetas(sampler.Thetas, sampler.threshold, xlim, ylim)
+        fig = _plot_thetas(sampler.Thetas, sampler.threshold, xlim, ylim)
     else:
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
@@ -82,6 +83,8 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
                 in
                 range(sampler.particles[0].shape[1])]
             _plot_thetas(sampler.particles[epoch], threshold, xlim, ylim)
+    return fig
+
 
 
 def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, density_kwds=None, range_padding=0.05,
@@ -110,20 +113,24 @@ def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, dens
 
     names = sampler.priors.names
 
+    # initialize figure and axes
     numdata, numvars = sampler.Thetas.shape
     fig, axes = plt.subplots(nrows=numvars, ncols=numvars, figsize=(8, 8))
     fig.subplots_adjust(hspace=0.05, wspace=0.05)
 
+    # compute data limits
     boundaries_list = []
     for theta in sampler.Thetas.T:
         rmin_, rmax_ = np.min(theta), np.max(theta)
         rdelta_ext = (rmax_ - rmin_) * range_padding / 2.
         boundaries_list.append((rmin_ - rdelta_ext, rmax_ + rdelta_ext))
 
+    # iterate all pairs of parameters
     for i, theta_a, name_a in zip(range(numvars), sampler.Thetas.T, names):
         for j, theta_b, name_b in zip(range(numvars), sampler.Thetas.T, names):
             ax = axes[i, j]
 
+            # plot the diagonal
             if i == j:
                 if diagonal == 'names':
                     ax.annotate(label, (0.5, 0.5), xycoords='axes fraction',
@@ -138,7 +145,7 @@ def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, dens
                     ind = np.linspace(y.min(), y.max(), 1000)
                     ax.plot(ind, gkde.evaluate(ind), **density_kwds)
 
-
+            # plot the off-diagonal
             else:
                 axes[i, j].scatter(theta_b, theta_a, **kwargs)
 
@@ -153,6 +160,7 @@ def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, dens
             if i != numvars - 1:
                 ax.xaxis.set_visible(False)
 
+    # set the axis boundaries and labels
     if numvars > 1:
         lim1 = boundaries_list[0]
         locs = axes[0][1].yaxis.get_majorticklocs()
@@ -269,3 +277,4 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True,
             sampler.thresholds, weights.shape[0]))
         plt.legend(loc="upper right")
         plt.show()
+        return fig
