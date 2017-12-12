@@ -27,7 +27,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
         # plot thetas of last iteration
         for plot_id, theta in enumerate(thetas.T):
             if nr_plots < PLOTS_PER_ROW:
-                plt.subplot(nr_rows, 1, plot_id + 1)
+                plt.subplot(nr_rows, nr_plots, plot_id + 1)
             else:
                 plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id + 1)
 
