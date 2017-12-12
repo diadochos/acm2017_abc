@@ -12,6 +12,7 @@ from .acquisition import MaxPosteriorVariance
 import warnings
 import GPyOpt
 
+
 # with warnings.catch_warnings():
 #     warnings.simplefilter("ignore")
 #     from GPyOpt.methods import BayesianOptimization
@@ -36,7 +37,8 @@ class BOLFI(BaseSampler):
         else:
             raise TypeError('"domain" needs to be a list!')
 
-    def __init__(self, priors, simulator, observation, summaries, domain, acquisition='LCB', distance='euclidean', verbosity=1, seed=None):
+    def __init__(self, priors, simulator, observation, summaries, domain, acquisition='LCB', distance='euclidean',
+                 verbosity=1, seed=None):
 
         # call BaseSampler __init__
         super().__init__(priors, simulator, observation, summaries, distance, verbosity, seed)
@@ -47,7 +49,8 @@ class BOLFI(BaseSampler):
         if acquisition.lower() in ['lcb', 'maxvar']:
             self.acqusition_type = acquisition.lower()
         else:
-            raise ValueError('acquisition must bei either "lcb" (lower confidence bound) or "maxvar" (maximum posterior variance)')
+            raise ValueError(
+                'acquisition must bei either "lcb" (lower confidence bound) or "maxvar" (maximum posterior variance)')
 
     def sample(self, nr_samples, threshold, n_chains=2, burn_in=100, **kwargs):
         """
@@ -108,7 +111,7 @@ class BOLFI(BaseSampler):
         # create a space
         # TODO: handle discrete parameters differently
         space = GPyOpt.Design_space(space=[{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in
-                  zip(self.priors, self.domain)])
+                                           zip(self.priors, self.domain)])
         bounds = space.get_bounds()
 
         # create GPyOpt object from objective function (distance)
@@ -123,14 +126,12 @@ class BOLFI(BaseSampler):
 
         evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
 
-
         # initialize by sampling from the prior
         initial_design = self.priors.sample(10)
 
         # finally create the Bayesian Optimization object
-        optim = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator, initial_design)
-
-
+        optim = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator,
+                                                           initial_design)
 
         print("Starting Bayesian Optimization")
 

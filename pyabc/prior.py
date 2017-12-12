@@ -99,7 +99,6 @@ class Prior:
 
 
 class PriorList(list):
-
     @property
     def names(self):
         return np.hstack((np.atleast_1d(p.name) for p in self))

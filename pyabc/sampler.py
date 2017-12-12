@@ -200,7 +200,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
     @staticmethod
     def load(fname):
         if not isinstance(fname, str):
-
             raise ValueError("Parameter fname has to be a string.")
 
         try:

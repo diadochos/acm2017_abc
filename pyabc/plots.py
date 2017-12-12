@@ -7,6 +7,7 @@ import pyabc
 
 PLOTS_PER_ROW = 3
 
+
 def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=True, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler

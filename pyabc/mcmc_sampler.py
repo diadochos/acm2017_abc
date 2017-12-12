@@ -146,7 +146,7 @@ class MCMCSampler(BaseSampler):
 
         if self.verbosity:
             print("Samples: %6d - Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
-            nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
+                nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
 
     def __str__(self):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(
