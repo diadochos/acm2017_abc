@@ -26,6 +26,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
         # plot thetas of last iteration
         for plot_id, theta in enumerate(thetas.T):
+
             if nr_plots < PLOTS_PER_ROW:
                 plt.subplot(nr_rows, nr_plots, plot_id + 1)
             else:
@@ -60,7 +61,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
         ), y=0.96)
 
         plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
-        plt.show()
+        #plt.show()
         return fig
 
     nr_plots = sampler.Thetas.shape[1]  # number of columns = model parameters
@@ -84,6 +85,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
                 in
                 range(sampler.particles[0].shape[1])]
             _plot_thetas(sampler.particles[epoch], threshold, xlim, ylim)
+
     return fig
 
 
