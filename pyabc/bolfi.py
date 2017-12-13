@@ -110,8 +110,8 @@ class BOLFI(BaseSampler):
 
         # create a space
         # TODO: handle discrete parameters differently
-        space = GPyOpt.Design_space(space=[{'name': p.name, 'type': 'continuous', 'domain': domain} for p, domain in
-                                           zip(self.priors, self.domain)])
+        space = GPyOpt.Design_space(space=[{'name': name, 'type': 'continuous', 'domain': domain} for name, domain in
+                                           zip(self.priors.names, self.domain)])
         bounds = space.get_bounds()
 
         # create GPyOpt object from objective function (distance)
