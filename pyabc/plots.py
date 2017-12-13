@@ -53,7 +53,8 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
             plt.xlabel(names[plot_id])
             plt.legend(loc="upper right")
 
-        fig.suptitle("Posterior for all model parameters with\n" + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
+        fig.suptitle("Posterior for all model parameters for \n {} with\n".format(
+            type(sampler).__name__) + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
             np.round(threshold, 4),
             sampler.Thetas.shape[0]
         ), y=0.96)
@@ -86,7 +87,6 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
     return fig
 
 
-
 def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, density_kwds=None, range_padding=0.05,
                **kwargs):
     """Plots a scatterplot matrix of subplots.  Each column of "sampler.Thetas" is plotted
@@ -105,7 +105,13 @@ def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, dens
     :param **kwargs: keyword arguments for the call to plt.scatter on the off-diagonal
     """
 
+    # set defaults for histogram
     hist_kwds = hist_kwds or {}
+    if not hist_kwds.get('alpha'):
+        hist_kwds['alpha'] = 0.6
+    if not hist_kwds.get('edgecolor'):
+        hist_kwds['edgecolor'] = 'k'
+
     density_kwds = density_kwds or {}
 
     if sampler.Thetas.shape == (0,):
@@ -176,7 +182,8 @@ def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, dens
             locs = locs.astype(int)
         axes[0][0].yaxis.set_ticklabels(locs)
 
-    fig.suptitle('Scatterplot matrix for all model parameters with\n' + r'$\rho(S(X),S(Y)) < {}, n = {}$'.format(
+    fig.suptitle('Scatterplot matrix of parameter posterior for \n {} with\n'.format(
+        type(sampler).__name__) + r'$\rho(S(X),S(Y)) < {}, n = {}$'.format(
         np.round(sampler.threshold, 4),
         sampler.Thetas.shape[0]
     ), y=0.96)
