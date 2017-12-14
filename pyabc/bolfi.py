@@ -52,7 +52,7 @@ class BOLFI(BaseSampler):
             raise ValueError(
                 'acquisition must bei either "lcb" (lower confidence bound) or "maxvar" (maximum posterior variance)')
 
-    def sample(self, nr_samples, threshold, initial_evidence_size=10, max_iter=100, max_time=60, n_chains=2, burn_in=100):
+    def sample(self, nr_samples, threshold, n_chains=2, burn_in=100, **kwargs):
         """
 
         :param threshold:
@@ -69,7 +69,7 @@ class BOLFI(BaseSampler):
 
         print("BOLFI sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
         self._reset()
-        self._run_BOLFI_sampling(nr_samples, initial_evidence_size, max_iter, max_time, n_chains, burn_in)
+        self._run_BOLFI_sampling(nr_samples, n_chains, burn_in, **kwargs)
 
         if self.verbosity == 1:
             print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
@@ -103,6 +103,23 @@ class BOLFI(BaseSampler):
         # intialize timer
         start = time.clock()
 
+        # old code (simple GPyOpt interface)
+
+        # create initial evidence set
+        # evidence_theta = self.priors.sample(10)
+        # evidence_f = np.apply_along_axis(f, axis=1, arr=evidence_theta)
+
+        # optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
+        #                              exact_feval=True, model_type='GP',
+        #                              num_cores=-1, initial_design_numdata=10,
+        #                              initial_design_type='sobol')
+
+
+        # TODO: make these arguments of __init__
+        max_iter = 100  # evaluation budget
+        max_time = 60  # time budget
+        eps = 10e-6  # Minimum allows distance between the last two observations
+
         # initialize Gaussian Process model
         model = GPyOpt.models.GPModel(verbose=False)
 
@@ -118,14 +135,14 @@ class BOLFI(BaseSampler):
         # initialize acquisition function
         acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
         if self.acqusition_type == 'maxvar':
-            acquisition = MaxPosteriorVariance(model, space, self.priors, eps=self.threshold, optimizer=acquisition_optimizer)
+            acquisition = MaxPosteriorVariance(model, space, self.priors, eps=0.01, optimizer=acquisition_optimizer)
         elif self.acqusition_type == 'lcb':
             acquisition = GPyOpt.acquisitions.AcquisitionLCB(model, space, optimizer=acquisition_optimizer)
 
         evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
 
         # initialize by sampling from the prior
-        initial_design = self.priors.sample(initial_evidence_size)
+        initial_design = self.priors.sample(10)
 
         # finally create the Bayesian Optimization object
         optim = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator,
@@ -133,7 +150,7 @@ class BOLFI(BaseSampler):
 
         print("Starting Bayesian Optimization")
 
-        optim.run_optimization(max_iter, max_time, eps=10e-6)
+        optim.run_optimization(max_iter, max_time, eps)
         self._bolfi = optim
 
         logposterior = lambda x: np.log(self.posterior(x))
@@ -168,4 +185,3 @@ class BOLFI(BaseSampler):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
-        self._simtime = 0
