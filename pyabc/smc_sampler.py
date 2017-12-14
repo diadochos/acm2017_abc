@@ -137,7 +137,7 @@ class SMCSampler(BaseSampler):
                             if prior.pdf(thetap[id]) == 0:
                                 thetap[id] = theta[id]
 
-                        Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
+                        Y = self.simulate((np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
                         list_of_stats_y = flatten_function(self.summaries, Y)
                         # either use predefined distance function or user defined discrepancy function
                         d = self.distance(list_of_stats_x, list_of_stats_y)
@@ -173,3 +173,4 @@ class SMCSampler(BaseSampler):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
+        self._simtime = 0
