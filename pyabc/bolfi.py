@@ -83,7 +83,7 @@ class BOLFI(BaseSampler):
 
         # define distance function
         f = lambda thetas: self.distance(stats_x, normalize_vector(
-            flatten_function(self.summaries, self.simulator(*thetas.flatten()))))
+            flatten_function(self.summaries, self.simulate(thetas.flatten()))))
 
         # intialize timer
         start = time.clock()
@@ -184,3 +184,4 @@ class BOLFI(BaseSampler):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
+        self._simtime = 0
