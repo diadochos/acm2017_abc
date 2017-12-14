@@ -4,7 +4,6 @@ import abc
 import dill as pickle
 import os
 import numpy as np
-import time
 from .prior import Prior, PriorList
 
 
@@ -41,12 +40,9 @@ class BaseSampler(metaclass=abc.ABCMeta):
         # optional
         self.verbosity = verbosity
         self.distance = distance
-        self.simtime = 0
 
         if seed is not None:
             np.random.seed(seed)
-
-
 
     # set and get simulator
     @property
@@ -60,14 +56,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
             self._simulator = sim
         else:
             raise TypeError("Passed argument {} is not a callable function!".format(sim))
-
-    def simulate(self,thetas):
-        start = time.clock() 
-        res = self.simulator(*thetas)
-        end = time.clock() - start
-        self.simtime += end 
-        return res 
-
 
     # set and get priors
     @property
@@ -88,8 +76,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
     @property
     def summaries(self):
         return self._summaries
-
-
 
     @summaries.setter
     def summaries(self, summaries):
@@ -165,15 +151,6 @@ class BaseSampler(metaclass=abc.ABCMeta):
                 raise ValueError("Passed argument {} must not be negative".format(nr_samples))
         else:
             raise TypeError("Passed argument {} has to be integer.".format(nr_samples))
-
-    @property
-    def simtime(self):
-        return self._simtime
-
-
-    @simtime.setter
-    def simtime(self,val):
-        self._simtime = val
 
     # only getter
     @property

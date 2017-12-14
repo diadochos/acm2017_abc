@@ -48,7 +48,6 @@ class RejectionSampler(BaseSampler):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
-        self._simtime = 0
 
     def _run_rejection_sampling(self, nr_samples, batch_size):
         """the abc rejection sampling algorithm with batches"""
@@ -58,7 +57,7 @@ class RejectionSampler(BaseSampler):
         stats_x = flatten_function(self.summaries, X)
 
         # convenience function to compute summaries of generated data
-        simulate_and_summarize = lambda thetas: flatten_function(self.summaries, self.simulate(thetas))
+        simulate_and_summarize = lambda thetas: flatten_function(self.summaries, self.simulator(*thetas))
         compute_distance = lambda stats_y: self.distance(stats_x, stats_y)
 
         # initialize the loop
