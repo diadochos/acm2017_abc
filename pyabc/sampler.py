@@ -167,20 +167,18 @@ class BaseSampler(metaclass=abc.ABCMeta):
             raise TypeError("Passed argument {} has to be integer.".format(nr_samples))
 
     @property
-    def simtimes(self):
-        return self._simtimes
+    def simtime(self):
+        return self._simtime
 
 
-    @simtimes.setter
-    def simtimes(self,val):
-        self._simtimes = val
+    @simtime.setter
+    def simtime(self,val):
+        self._simtime = val
 
     # only getter
     @property
     def nr_iter(self):
         return self._nr_iter
-
-
 
     @property
     def Thetas(self):
