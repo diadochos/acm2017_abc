@@ -77,8 +77,10 @@ class MCMCSampler(BaseSampler):
         thetas[0] = rej_samp.Thetas[np.argmin(rej_samp.distances)]
         distances[0] = np.min(rej_samp.distances)
 
-        step = np.zeros((num_priors, num_priors), float)
-        np.fill_diagonal(step, step_size)
+        if step_size is None:
+             step_size = 2 * np.cov(rej_samp.Thetas.T)
+
+        step = np.identity(num_priors) * step_size
 
         for i in range(1, nr_samples):
             while True:
@@ -118,7 +120,7 @@ class MCMCSampler(BaseSampler):
 
         return thetas
 
-    def sample(self, threshold, nr_samples, step_size):
+    def sample(self, threshold, nr_samples, step_size=None):
         """Main method of sampler. Draw from prior and simulate data until nr_samples were accepted according to threshold.
 
         Args:
@@ -132,7 +134,7 @@ class MCMCSampler(BaseSampler):
         """
         self.threshold = threshold
 
-        if len(step_size) != len(self.priors):
+        if step_size is not None and len(step_size) != len(self.priors):
             raise ValueError('Step size for every prior is required')
 
         if self.verbosity:
