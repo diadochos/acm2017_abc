@@ -75,6 +75,21 @@ class BOLFI(BaseSampler):
             print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
                 nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
 
+    def likelihood(self, theta):
+        # eqn 47 from BOLFI paper
+        m, s = self._bolfi.model.predict(theta)
+        # F = gaussian cdf, see eqn 28 in BOLFI paper
+        return ss.norm.cdf((np.log(self.threshold) - m) / np.sqrt(s)).flatten()
+
+    # compute posterior from likelihood and prior
+    # includes check for bounds
+    # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
+    def posterior(self, theta):
+        for x, bound in zip(theta, self.domain):
+            if x < bound[0] or x > bound[1]:
+                return 0
+        return self.likelihood(np.atleast_1d(theta)) * self.priors.pdf(theta)
+
     def _run_BOLFI_sampling(self, nr_samples, initial_evidence_size=10, max_iter=100, max_time=60, n_chains=2, burn_in=100):
         # summary statistics of the observed data
         stats_x = normalize_vector(flatten_function(self.summaries, self.observation))
@@ -82,8 +97,8 @@ class BOLFI(BaseSampler):
         fill_up, rest = divmod(nr_samples, n_chains)
 
         # define distance function
-        f = lambda thetas: self.distance(stats_x, normalize_vector(
-            flatten_function(self.summaries, self.simulate(thetas.flatten()))))
+        f = lambda thetas: np.log(self.distance(stats_x, normalize_vector(
+            flatten_function(self.summaries, self.simulate(thetas.flatten())))))
 
         # intialize timer
         start = time.clock()
@@ -95,7 +110,7 @@ class BOLFI(BaseSampler):
         # TODO: handle discrete parameters differently
         space = GPyOpt.Design_space(space=[{'name': name, 'type': 'continuous', 'domain': domain} for name, domain in
                                            zip(self.priors.names, self.domain)])
-        bounds = space.get_bounds()
+
 
         # create GPyOpt object from objective function (distance)
         objective = GPyOpt.core.task.SingleObjective(f)
@@ -121,21 +136,7 @@ class BOLFI(BaseSampler):
         optim.run_optimization(max_iter, max_time, eps=10e-6)
         self._bolfi = optim
 
-        # approximate lilkelihood
-        def loglikelihood(theta):
-            # eqn 47 from BOLFI paper
-            m, s = optim.model.predict(theta)
-            # F = gaussian cdf, see eqn 28 in BOLFI paper
-            return ss.norm.logcdf((self.threshold - m) / np.sqrt(s)).flatten()
-
-        # compute posterior from likelihood and prior
-        # includes check for bounds
-        # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
-        def logposterior(theta):
-            for x, bound in zip(theta, bounds):
-                if x < bound[0] or x > bound[1]:
-                    return -np.inf
-            return loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
+        logposterior = lambda x: np.log(self.posterior(x))
 
         # setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function
         # that returns the natural logarithm of the posterior propability
