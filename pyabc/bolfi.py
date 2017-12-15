@@ -52,7 +52,7 @@ class BOLFI(BaseSampler):
             raise ValueError(
                 'acquisition must bei either "lcb" (lower confidence bound) or "maxvar" (maximum posterior variance)')
 
-    def sample(self, nr_samples, threshold, n_chains=2, burn_in=100, **kwargs):
+    def sample(self, nr_samples, threshold, initial_evidence_size=10, max_iter=100, max_time=60, n_chains=2, burn_in=100):
         """
 
         :param threshold:
@@ -69,7 +69,7 @@ class BOLFI(BaseSampler):
 
         print("BOLFI sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
         self._reset()
-        self._run_BOLFI_sampling(nr_samples, n_chains, burn_in, **kwargs)
+        self._run_BOLFI_sampling(nr_samples, initial_evidence_size, max_iter, max_time, n_chains, burn_in)
 
         if self.verbosity == 1:
             print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
@@ -115,11 +115,6 @@ class BOLFI(BaseSampler):
         #                              initial_design_type='sobol')
 
 
-        # TODO: make these arguments of __init__
-        max_iter = 100  # evaluation budget
-        max_time = 60  # time budget
-        eps = 10e-6  # Minimum allows distance between the last two observations
-
         # initialize Gaussian Process model
         model = GPyOpt.models.GPModel(verbose=False)
 
@@ -150,7 +145,7 @@ class BOLFI(BaseSampler):
 
         print("Starting Bayesian Optimization")
 
-        optim.run_optimization(max_iter, max_time, eps)
+        optim.run_optimization(max_iter, max_time, eps=10e-6)
         self._bolfi = optim
 
         logposterior = lambda x: np.log(self.posterior(x))
