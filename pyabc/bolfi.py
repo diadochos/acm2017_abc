@@ -103,18 +103,6 @@ class BOLFI(BaseSampler):
         # intialize timer
         start = time.clock()
 
-        # old code (simple GPyOpt interface)
-
-        # create initial evidence set
-        # evidence_theta = self.priors.sample(10)
-        # evidence_f = np.apply_along_axis(f, axis=1, arr=evidence_theta)
-
-        # optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
-        #                              exact_feval=True, model_type='GP',
-        #                              num_cores=-1, initial_design_numdata=10,
-        #                              initial_design_type='sobol')
-
-
         # initialize Gaussian Process model
         model = GPyOpt.models.GPModel(verbose=False)
 
@@ -130,14 +118,14 @@ class BOLFI(BaseSampler):
         # initialize acquisition function
         acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
         if self.acqusition_type == 'maxvar':
-            acquisition = MaxPosteriorVariance(model, space, self.priors, eps=0.01, optimizer=acquisition_optimizer)
+            acquisition = MaxPosteriorVariance(model, space, self.priors, eps=self.threshold, optimizer=acquisition_optimizer)
         elif self.acqusition_type == 'lcb':
             acquisition = GPyOpt.acquisitions.AcquisitionLCB(model, space, optimizer=acquisition_optimizer)
 
         evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
 
         # initialize by sampling from the prior
-        initial_design = self.priors.sample(10)
+        initial_design = self.priors.sample(initial_evidence_size)
 
         # finally create the Bayesian Optimization object
         optim = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator,
@@ -180,3 +168,4 @@ class BOLFI(BaseSampler):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
+        self._simtime = 0

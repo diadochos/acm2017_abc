@@ -90,7 +90,7 @@ class ABCDESampler(BaseSampler):
         """perform the metropolis hasting update step, Eq (6) in the paper """
         theta_old = self._particles[it - 1, group, i]
 
-        Y = self.simulator(*(np.atleast_1d(theta_star[:-1])))  # unpack thetas as single arguments for simulator
+        Y = self.simulate((np.atleast_1d(theta_star[:-1])))  # unpack thetas as single arguments for simulator
         stats_y = flatten_function(self.summaries, Y)
         d = self.distance(self._stats_x, stats_y)
 
@@ -218,7 +218,7 @@ class ABCDESampler(BaseSampler):
             for j in range(self._pool_size):
                 curr_theta = self._particles[0, i, j, :]
 
-                Y = self.simulator(*(np.atleast_1d(curr_theta[:-1])))  # unpack thetas as single arguments for simulator
+                Y = self.simulate((np.atleast_1d(curr_theta[:-1])))  # unpack thetas as single arguments for simulator
                 stats_y = flatten_function(self.summaries, Y)
                 d = self.distance(self._stats_x, stats_y)
 
@@ -290,3 +290,4 @@ class ABCDESampler(BaseSampler):
         self._sigmas = np.zeros((self.nr_iter, self._nr_groups, self._nr_priors, self._nr_priors))
         self._distances = np.zeros((self.nr_iter, self._nr_groups, self._pool_size))
         self._group_deltas = np.zeros(self._nr_groups)
+        self._simtime = 0
