@@ -25,7 +25,7 @@ class ABCDESampler(BaseSampler):
     def __init__( self, priors, simulator, observation, summaries, exp_lambda = 20, distance='euclidean', verbosity=1, seed=None ):
         # call BaseSampler __init__
         # extend list of priors by prior for delta
-        exponential_prior = pyabc.Prior('expon', 1e-8, 1/exp_lambda, name="delta")
+        exponential_prior = pyabc.Prior('expon', 0, exp_lambda, name="delta")
         if not isinstance(priors, list):
             priors = [priors]
         priors.append(exponential_prior)  # now drawing samples from priors means to draw sample for delta, too
@@ -40,7 +40,7 @@ class ABCDESampler(BaseSampler):
             nr_iter: Number of iterations of the algorithm
             nr_groups: Number of population pools
             nr_samples: Number of samples we want to obtain from theta posterior
-  			burn_in: Number of iterations in 'burn_in' phase
+            burn_in: Number of iterations in 'burn_in' phase
             alpha: Probability to do the migration step
             beta: Probability to do the mutation step
             kappa: Probability to keep the newly generated theta component
@@ -222,7 +222,7 @@ class ABCDESampler(BaseSampler):
                 stats_y = flatten_function(self.summaries, Y)
                 d = self.distance(self._stats_x, stats_y)
 
-                self._weights[0, i, j] = self.calculate_fitness(curr_theta, d) + 1e-8 # TODO: different deltas necessary?
+                self._weights[0, i, j] = self.calculate_fitness(curr_theta, d) # different deltas necessary?
                 self._distances[0, i, j] = d
                 # normalize weights within pool
             self._weights[0, i, :] = self._weights[0, i, :] / sum(self._weights[0, i, :])
