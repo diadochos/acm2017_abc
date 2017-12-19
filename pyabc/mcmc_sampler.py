@@ -49,6 +49,7 @@ class MCMCSampler(BaseSampler):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
+        self._simtime = 0
 
     def _run_mcmc_sampling(self, nr_samples, step_size):
         X = self.observation
@@ -93,7 +94,7 @@ class MCMCSampler(BaseSampler):
                     if prior.pdf(thetap[id]) == 0:
                         thetap[id] = theta[id]
 
-                Y = self.simulator(*(np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
+                Y = self.simulate((np.atleast_1d(thetap)))  # unpack thetas as single arguments for simulator
                 stats_y = flatten_function(self.summaries, Y)
 
                 # either use predefined distance function or user defined discrepancy function

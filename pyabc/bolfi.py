@@ -23,10 +23,6 @@ class BOLFI(BaseSampler):
     def domain(self):
         return self._domain
 
-    @property
-    def bolfi(self):
-        return self._bolfi
-
     @domain.setter
     def domain(self, domain):
         if isinstance(domain, list):
@@ -52,7 +48,7 @@ class BOLFI(BaseSampler):
             raise ValueError(
                 'acquisition must bei either "lcb" (lower confidence bound) or "maxvar" (maximum posterior variance)')
 
-    def sample(self, nr_samples, threshold, n_chains=2, burn_in=100, **kwargs):
+    def sample(self, nr_samples, threshold, initial_evidence_size=10, max_iter=100, n_chains=2, burn_in=100, **kwargs):
         """
 
         :param threshold:
@@ -69,41 +65,37 @@ class BOLFI(BaseSampler):
 
         print("BOLFI sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
         self._reset()
-        self._run_BOLFI_sampling(nr_samples, n_chains, burn_in, **kwargs)
+        self._run_BOLFI_sampling(nr_samples, initial_evidence_size, max_iter, n_chains, burn_in, **kwargs)
 
         if self.verbosity == 1:
             print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
                 nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
 
-    def _run_BOLFI_sampling(self, nr_samples, n_chains, burn_in, **kwargs):
+    def likelihood(self, theta):
+        # eqn 47 from BOLFI paper
+        m, s = self.optim.model.predict(theta)
+        # F = gaussian cdf, see eqn 28 in BOLFI paper
+        return ss.norm.cdf((np.log(self.threshold) - m) / np.sqrt(s)).flatten()
+
+    # compute posterior from likelihood and prior
+    # includes check for bounds
+    # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
+    def posterior(self, theta):
+        for x, bound in zip(theta, self.domain):
+            if x < bound[0] or x > bound[1]:
+                return 0
+        return self.likelihood(np.atleast_1d(theta)) * self.priors.pdf(theta)
+
+    def _run_BOLFI_sampling(self, nr_samples, initial_evidence_size=10, max_iter=100, n_chains=2, burn_in=100, **kwargs):
         # summary statistics of the observed data
         stats_x = normalize_vector(flatten_function(self.summaries, self.observation))
 
-        fill_up, rest = divmod(nr_samples, n_chains)
-
         # define distance function
-        f = lambda thetas: self.distance(stats_x, normalize_vector(
-            flatten_function(self.summaries, self.simulator(*thetas.flatten()))))
+        f = lambda thetas: np.log(self.distance(stats_x, normalize_vector(
+            flatten_function(self.summaries, self.simulate(thetas.flatten())))))
 
         # intialize timer
         start = time.clock()
-
-        # old code (simple GPyOpt interface)
-
-        # create initial evidence set
-        # evidence_theta = self.priors.sample(10)
-        # evidence_f = np.apply_along_axis(f, axis=1, arr=evidence_theta)
-
-        # optim = BayesianOptimization(f=f, domain=bounds, acquisition_type='EI',
-        #                              exact_feval=True, model_type='GP',
-        #                              num_cores=-1, initial_design_numdata=10,
-        #                              initial_design_type='sobol')
-
-
-        # TODO: make these arguments of __init__
-        max_iter = 100  # evaluation budget
-        max_time = 60  # time budget
-        eps = 10e-6  # Minimum allows distance between the last two observations
 
         # initialize Gaussian Process model
         model = GPyOpt.models.GPModel(verbose=False)
@@ -112,7 +104,7 @@ class BOLFI(BaseSampler):
         # TODO: handle discrete parameters differently
         space = GPyOpt.Design_space(space=[{'name': name, 'type': 'continuous', 'domain': domain} for name, domain in
                                            zip(self.priors.names, self.domain)])
-        bounds = space.get_bounds()
+
 
         # create GPyOpt object from objective function (distance)
         objective = GPyOpt.core.task.SingleObjective(f)
@@ -120,50 +112,36 @@ class BOLFI(BaseSampler):
         # initialize acquisition function
         acquisition_optimizer = GPyOpt.optimization.AcquisitionOptimizer(space)
         if self.acqusition_type == 'maxvar':
-            acquisition = MaxPosteriorVariance(model, space, self.priors, eps=0.01, optimizer=acquisition_optimizer)
+            acquisition = MaxPosteriorVariance(model, space, self.priors, eps=self.threshold, optimizer=acquisition_optimizer)
         elif self.acqusition_type == 'lcb':
             acquisition = GPyOpt.acquisitions.AcquisitionLCB(model, space, optimizer=acquisition_optimizer)
 
         evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
 
         # initialize by sampling from the prior
-        initial_design = self.priors.sample(10)
+        initial_design = self.priors.sample(initial_evidence_size)
 
         # finally create the Bayesian Optimization object
-        optim = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator,
+        self.optim = GPyOpt.methods.ModularBayesianOptimization(model, space, objective, acquisition, evaluator,
                                                            initial_design)
 
-        print("Starting Bayesian Optimization")
+        print("Starting Bayesian Optimization with initial evidence size = {}, max_iter = {}".format(initial_evidence_size, max_iter))
 
-        optim.run_optimization(max_iter, max_time, eps)
-        self._bolfi = optim
+        self.optim.run_optimization(max_iter, **kwargs)
 
-        # approximate lilkelihood
-        def loglikelihood(theta, h=0.01):
-            # eqn 47 from BOLFI paper
-            m, s = optim.model.predict(theta)
-            # F = gaussian cdf, see eqn 28 in BOLFI paper
-            return ss.norm.logcdf((self.threshold - m) / np.sqrt(s)).flatten()
 
-        # compute posterior from likelihood and prior
-        # includes check for bounds
-        # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
-        def logposterior(theta):
-            for x, bound in zip(theta, bounds):
-                if x < bound[0] or x > bound[1]:
-                    return -np.inf
-            return loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
+        logposterior = lambda x: np.log(self.posterior(x))
 
         # setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function
         # that returns the natural logarithm of the posterior propability
         sampler = emcee.EnsembleSampler(n_chains, len(self.priors), logposterior)
 
-        print('Starting MCMC sampling with approximative likelihood')
+        print('Starting MCMC sampling using approximate likelihood with {} chains and {} burn-in samples'.format(n_chains, burn_in))
 
         # begin mcmc with an exploration phase and store end pos for second run
-        p0 = self.priors.sample(n_chains)
-        pos = sampler.run_mcmc(p0, burn_in)[0]
-        sampler.reset()
+        pos = self.priors.sample(n_chains)
+        #pos = sampler.run_mcmc(p0, burn_in)[0]
+        #sampler.reset()
         N = divmod(nr_samples, n_chains)[0] + 1
         sampler.run_mcmc(pos, N)
 
@@ -184,3 +162,4 @@ class BOLFI(BaseSampler):
         """reset class properties for a new call of sample method"""
         self._nr_iter = 0
         self._Thetas = np.empty(0)
+        self._simtime = 0
