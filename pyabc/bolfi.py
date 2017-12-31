@@ -82,17 +82,17 @@ class BOLFI(BaseSampler):
     # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
     def posterior(self, theta):
         for x, bound in zip(theta, self.domain):
-            if x < bound[0] or x > bound[1]:
+            if x <= bound[0] or x >= bound[1]:
                 return 0
         return self.likelihood(np.atleast_1d(theta)) * self.priors.pdf(theta)
 
     def _run_BOLFI_sampling(self, nr_samples, initial_evidence_size=10, max_iter=100, n_chains=2, burn_in=100, **kwargs):
         # summary statistics of the observed data
-        stats_x = normalize_vector(flatten_function(self.summaries, self.observation))
+        stats_x = flatten_function(self.summaries, self.observation)
 
         # define distance function
-        f = lambda thetas: np.log(self.distance(stats_x, normalize_vector(
-            flatten_function(self.summaries, self.simulate(thetas.flatten())))))
+        f = lambda thetas: np.log(self.distance(stats_x,
+                                flatten_function(self.summaries, self.simulate(thetas.flatten()))))
 
         # intialize timer
         start = time.clock()
