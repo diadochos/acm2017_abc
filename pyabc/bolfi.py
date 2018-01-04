@@ -71,20 +71,20 @@ class BOLFI(BaseSampler):
             print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
                 nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
 
-    def likelihood(self, theta):
+    def loglikelihood(self, theta):
         # eqn 47 from BOLFI paper
-        m, s = self.optim.model.predict(theta)
+        m, v = self.optim.model.predict(theta)
         # F = gaussian cdf, see eqn 28 in BOLFI paper
-        return ss.norm.cdf((np.log(self.threshold) - m) / np.sqrt(s)).flatten()
+        return ss.norm.logcdf((np.log(self.threshold) - m) / np.sqrt(v)).flatten()
 
     # compute posterior from likelihood and prior
     # includes check for bounds
     # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
-    def posterior(self, theta):
+    def logposterior(self, theta):
         for x, bound in zip(theta, self.domain):
             if x <= bound[0] or x >= bound[1]:
-                return 0
-        return self.likelihood(np.atleast_1d(theta)) * self.priors.pdf(theta)
+                return -np.inf
+        return self.loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
 
     def _run_BOLFI_sampling(self, nr_samples, initial_evidence_size=10, max_iter=100, n_chains=2, burn_in=100, **kwargs):
         # summary statistics of the observed data
@@ -114,7 +114,7 @@ class BOLFI(BaseSampler):
         if self.acqusition_type == 'maxvar':
             acquisition = MaxPosteriorVariance(model, space, self.priors, eps=self.threshold, optimizer=acquisition_optimizer)
         elif self.acqusition_type == 'lcb':
-            acquisition = GPyOpt.acquisitions.AcquisitionLCB(model, space, optimizer=acquisition_optimizer)
+            acquisition = GPyOpt.acquisitions.AcquisitionLCB(model, space, optimizer=acquisition_optimizer, exploration_weight=10)
 
         evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
 
@@ -130,7 +130,7 @@ class BOLFI(BaseSampler):
         self.optim.run_optimization(max_iter, **kwargs)
 
 
-        logposterior = lambda x: np.log(self.posterior(x))
+        logposterior = self.logposterior
 
         # setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function
         # that returns the natural logarithm of the posterior propability
@@ -140,8 +140,8 @@ class BOLFI(BaseSampler):
 
         # begin mcmc with an exploration phase and store end pos for second run
         pos = self.priors.sample(n_chains)
-        #pos = sampler.run_mcmc(p0, burn_in)[0]
-        #sampler.reset()
+        pos = sampler.run_mcmc(p0, burn_in)[0]
+        sampler.reset()
         N = divmod(nr_samples, n_chains)[0] + 1
         sampler.run_mcmc(pos, N)
 
