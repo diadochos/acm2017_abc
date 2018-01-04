@@ -8,7 +8,7 @@ import pyabc
 PLOTS_PER_ROW = 3
 
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=True, **kwargs):
+def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=True, bins='auto', **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
@@ -19,7 +19,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
-    def _plot_thetas(thetas, threshold, xlim=None, ylim=None):
+    def _plot_thetas(thetas, threshold, bins='auto', xlim=None, ylim=None):
         nonlocal sampler, kde, nr_rows, nr_plots, names, kwargs
 
         fig = plt.figure()
@@ -33,7 +33,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
                 plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id + 1)
 
             # plot posterior
-            plt.hist(theta, edgecolor="k", bins='auto', normed=normed, alpha=0.4)
+            plt.hist(theta, edgecolor="k", bins=bins, normed=normed, alpha=0.4)
             # plot mean
             plt.axvline(np.mean(theta), linewidth=1.2, color="m", linestyle="--", label="mean")
             # plot MAP
@@ -73,7 +73,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
     xlim = kwargs.get('xlim', None)
 
     if isinstance(sampler, pyabc.BaseSampler):
-        fig = _plot_thetas(sampler.Thetas, sampler.threshold, xlim, ylim)
+        fig = _plot_thetas(sampler.Thetas, sampler.threshold, bins, xlim, ylim)
     else:
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
@@ -84,7 +84,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
                 for t
                 in
                 range(sampler.particles[0].shape[1])]
-            _plot_thetas(sampler.particles[epoch], threshold, xlim, ylim)
+            _plot_thetas(sampler.particles[epoch], threshold, bins, xlim, ylim)
 
     return fig
 
