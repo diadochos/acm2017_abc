@@ -1,73 +1,64 @@
 from .base_example import Example
 import numpy as np
 
+SAMPLE_SIZE = 20
 
-def nr_mutations(y):
-    return y.shape[0]
+def T1(y):
+    return y[y>0].shape[0] / SAMPLE_SIZE
 
-def max_cluster(y):
-    return y.max()
-
-def nr_transmissions(y):
-    return sum(np.where(y > 1, 1, 0))
+def T2(y):
+    """genetic diversity"""
+    return 1 - np.sum(np.power(y/SAMPLE_SIZE, 2))
 
 class Tuberculosis(Example):
 
     def _summaries(self):
-        return [nr_mutations, max_cluster, nr_transmissions]
+        return [T1, T2]
 
 
-    def simulator(self, alpha, tau, delta=0):
-        m = 20
+    def simulator(self, alpha, tau=0.198, delta=0):
         infected_hosts = np.array([[1]]) # list of haplotypes holding infectious hosts, we always start with one infected patient
         limit_exceeded = False
         round = 0
 
-        while np.sum(infected_hosts) <= m and not limit_exceeded:
+        while np.sum(infected_hosts) <= SAMPLE_SIZE and not limit_exceeded:
             round += 1
 
             #reset if all died
             if np.sum(infected_hosts) == 0:
                 infected_hosts = np.array([[1]])
 
-            # for each haplotype
-            for cell in infected_hosts:
-                # for each infectious host
-                if cell[0] == 0:
-                    continue
-                for host in range(cell[0]):
-                    # one of three things happen: transmission, mutation or recovery/death
-                    event = np.random.rand()
-                    # if he dies -> no more action possible
-                    if event < delta:
-                        cell -= 1
+            # new event happens
+            # choose which genotype is affected
+            k = np.random.choice(range(infected_hosts.shape[0]), p=(infected_hosts/np.sum(infected_hosts)).flatten())
+            cell = infected_hosts[k]
 
-                        continue
+            # which event?
+            event = np.random.choice(range(3), p=np.array([alpha, delta, tau]) / np.sum(np.array([alpha, delta, tau])))
 
-                    # otherwise, he can infect others or/and mutate
-                    event = np.random.rand()
-                    if event < alpha:
-                        if np.sum(infected_hosts) == m:
-                            limit_exceeded = True
-                            break
-                        else:
-                            cell += 1
-
-
-                    event = np.random.rand()
-                    if event < tau and cell[0] > 1:
-                        new_cell = [1]
-                        cell -= 1
-                        infected_hosts = np.vstack((infected_hosts, new_cell))
-
-
-
-                if limit_exceeded:
+            # one of three things happen: transmission, mutation or recovery/death
+            if event ==  0:
+                if np.sum(infected_hosts) == SAMPLE_SIZE:
+                    limit_exceeded = True
                     break
+                else:
+                    cell += 1
 
-        for i in range(len(infected_hosts), m):
+            elif event == 1:
+                cell -= 1
+
+            else:
+                new_cell = [1]
+                cell -= 1
+                infected_hosts = np.vstack((infected_hosts, new_cell))
+
+
+            if limit_exceeded:
+                break
+
+        for i in range(len(infected_hosts), SAMPLE_SIZE):
             infected_hosts = np.vstack((infected_hosts, [0]))
 
-        return np.array(sorted(infected_hosts, reverse=True))[:m].flatten()
+        return np.array(sorted(infected_hosts, reverse=True))[:SAMPLE_SIZE].flatten()
 
 tuberculosis = Tuberculosis()
