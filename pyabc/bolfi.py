@@ -139,7 +139,7 @@ class BOLFI(BaseSampler):
         print('Starting MCMC sampling using approximate likelihood with {} chains and {} burn-in samples'.format(n_chains, burn_in))
 
         # begin mcmc with an exploration phase and store end pos for second run
-        pos = self.priors.sample(n_chains)
+        p0 = self.priors.sample(n_chains)
         pos = sampler.run_mcmc(p0, burn_in)[0]
         sampler.reset()
         N = divmod(nr_samples, n_chains)[0] + 1
