@@ -151,7 +151,7 @@ class BOLFI(BaseSampler):
         self._acceptance_rate = np.mean(sampler.acceptance_fraction)
 
         # fill thetas equally with samples from all chains
-        thetas = sampler.flatchain[:nr_samples]
+        thetas = sampler.flatchain
 
         self._Thetas = thetas
         # self._distances = distances[:nr_samples]
