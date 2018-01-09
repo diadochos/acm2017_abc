@@ -48,45 +48,9 @@ class BOLFI(BaseSampler):
             raise ValueError(
                 'acquisition must bei either "lcb" (lower confidence bound) or "maxvar" (maximum posterior variance)')
 
-    def sample(self, nr_samples, threshold, initial_evidence_size=10, max_iter=100, n_chains=2, burn_in=100, **kwargs):
-        """
-
-        :param threshold:
-        :param nr_samples:
-        :param n_steps:
-        :param burn_in:
-        :param kwargs:
-        :return:
-        """
-        if n_chains > nr_samples:
-            raise ValueError("number of chains has to be smaller than number of samples")
-
-        self.threshold = threshold
-
-        print("BOLFI sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
+    def fit(self, initial_evidence_size=10, max_iter=100, **kwargs):
         self._reset()
-        self._run_BOLFI_sampling(nr_samples, initial_evidence_size, max_iter, n_chains, burn_in, **kwargs)
 
-        if self.verbosity == 1:
-            print("Samples: %6d - Threshold: keiner - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
-                nr_samples, self.nr_iter, self.acceptance_rate, self.runtime))
-
-    def loglikelihood(self, theta):
-        # eqn 47 from BOLFI paper
-        m, v = self.optim.model.predict(theta)
-        # F = gaussian cdf, see eqn 28 in BOLFI paper
-        return ss.norm.logcdf((np.log(self.threshold) - m) / np.sqrt(v)).flatten()
-
-    # compute posterior from likelihood and prior
-    # includes check for bounds
-    # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
-    def logposterior(self, theta):
-        for x, bound in zip(theta, self.domain):
-            if x <= bound[0] or x >= bound[1]:
-                return -np.inf
-        return self.loglikelihood(np.atleast_1d(theta)) + self.priors.logpdf(theta)
-
-    def _run_BOLFI_sampling(self, nr_samples, initial_evidence_size=10, max_iter=100, n_chains=2, burn_in=100, **kwargs):
         # summary statistics of the observed data
         stats_x = flatten_function(self.summaries, self.observation)
 
@@ -129,14 +93,37 @@ class BOLFI(BaseSampler):
 
         self.optim.run_optimization(max_iter, **kwargs)
 
+        self._runtime = time.clock() - start
 
-        logposterior = self.logposterior
+
+        if self.verbosity == 1:
+            print("Fitting BOLFI finished - Time: %8.2f s" % (self.runtime))
+
+    def sample(self, nr_samples, threshold,  n_chains=2, burn_in=100):
+        """
+
+        :param threshold:
+        :param nr_samples:
+        :param n_steps:
+        :param burn_in:
+        :param kwargs:
+        :return:
+        """
+
+        if n_chains > nr_samples:
+            raise ValueError("number of chains has to be smaller than number of samples")
+
+        self.threshold = threshold
+
+        print("Approximating likelihood with threshold {}".format(self.threshold))
+
+        logposterior = self._logposterior
 
         # setup EnsembleSampler with nwalkers (chains), dimension of theta vector and a function
         # that returns the natural logarithm of the posterior propability
         sampler = emcee.EnsembleSampler(n_chains, len(self.priors), logposterior)
 
-        print('Starting MCMC sampling using approximate likelihood with {} chains and {} burn-in samples'.format(n_chains, burn_in))
+        print('Obtaining {} MCMC sampling using approximate likelihood with {} chains and {} burn-in samples'.format(nr_samples, n_chains, burn_in))
 
         # begin mcmc with an exploration phase and store end pos for second run
         p0 = self.priors.sample(n_chains)
@@ -145,10 +132,12 @@ class BOLFI(BaseSampler):
         N = divmod(nr_samples, n_chains)[0] + 1
         sampler.run_mcmc(pos, N)
 
-        self._runtime = time.clock() - start
 
         self._nr_iter = n_chains * N
         self._acceptance_rate = np.mean(sampler.acceptance_fraction)
+
+        if self.verbosity == 1:
+            print("Samples: %6d - Acceptance rate: %4f" % (self.nr_iter, self.acceptance_rate))
 
         # fill thetas equally with samples from all chains
         thetas = sampler.flatchain
@@ -157,6 +146,26 @@ class BOLFI(BaseSampler):
         # self._distances = distances[:nr_samples]
 
         return thetas
+
+
+
+
+    def _loglikelihood(self, theta):
+        # eqn 47 from BOLFI paper
+        m, v = self.optim.model.predict(theta)
+        # F = gaussian cdf, see eqn 28 in BOLFI paper
+        return ss.norm.logcdf((np.log(self.threshold) - m) / np.sqrt(v)).flatten()
+
+    # compute posterior from likelihood and prior
+    # includes check for bounds
+    # TODO: check if log works correctly, when likelihood or prior == 1 -> log = 0
+    def _logposterior(self, theta):
+        return self._loglikelihood(theta) + self.priors.logpdf(theta)
+
+    def extract_posterior(self, threshold):
+        self.threshold = threshold
+        return lambda theta: np.exp(self._logposterior(theta))
+
 
     def _reset(self):
         """reset class properties for a new call of sample method"""
