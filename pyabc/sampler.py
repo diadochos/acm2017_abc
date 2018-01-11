@@ -213,8 +213,8 @@ class BaseSampler(metaclass=abc.ABCMeta):
             raise ValueError("Parameter fname has to be a string.")
 
         try:
-            if not os.path.isdir(os.path.basename(fname)):
-                os.makedirs(os.path.basename(fname), exist_ok=True)
+            if not os.path.isdir(os.path.dirname(fname)):
+                os.makedirs(os.path.dirname(fname), exist_ok=True)
 
             pickle.dump(self, open(fname, "wb"))
         except IOError as io:
