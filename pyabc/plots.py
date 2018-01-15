@@ -8,21 +8,37 @@ import pyabc
 PLOTS_PER_ROW = 3
 
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=True, bins='auto', **kwargs):
+def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, hist_kws={}, kde_kws={}, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
-    :param kde: true - use kernel density estimation function of scipy.stats to draw posterior distribution
-    :param xlim: list of xlim values for the individual marginal distributions
+    :hist_kws: dictionary of matplotlib properties passed to the hist plot function
+    :kde_kws: dictionary of matplotlib properties passed to the kde plot function
     :param kwargs: list of keyword arguments for kde function of scipy.stats
     """
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
-    def _plot_thetas(thetas, threshold, bins='auto', xlim=None, ylim=None):
-        nonlocal sampler, kde, nr_rows, nr_plots, names, kwargs
+    def _plot_thetas(thetas, threshold):
+        nonlocal sampler, nr_rows, nr_plots, names, hist_kws, kde_kws, kwargs
 
         fig = plt.figure()
+
+        # default properties
+        if hist_kws.get('bins') is None:
+            hist_kws['bins'] = 'auto'
+
+        if hist_kws.get('normed') is None:
+            hist_kws['normed'] = True
+
+        if hist_kws.get('alpha') is None:
+            hist_kws['alpha'] = 0.4
+
+        if hist_kws.get('edgecolor') is None:
+            hist_kws['edgecolor'] = 'k'
+
+        if kwargs.get('color') is None:
+            kwargs['color'] = 'darkblue'
 
         # plot thetas of last iteration
         for plot_id, theta in enumerate(thetas.T):
@@ -33,28 +49,27 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
                 plt.subplot(nr_rows, PLOTS_PER_ROW, plot_id + 1)
 
             # plot posterior
-            plt.hist(theta, edgecolor="k", bins=bins, normed=normed, alpha=0.4)
+            plt.hist(theta, **hist_kws)
+            # plot KDE and MAP
+            # get the bandwidth method argument for scipy
+            # and run scipy's kde
+            kde = ss.kde.gaussian_kde(theta, bw_method=kde_kws.get('bw_method'), **kde_kws)
+            xx = np.linspace(np.min(theta), np.max(theta), 200)
+            dens = kde(xx)
+            plt.plot(xx, dens, color=kwargs['color'], label="ABC posterior")
             # plot mean
-            plt.axvline(np.mean(theta), linewidth=1.2, color="m", linestyle="--", label="mean")
-            # plot MAP
-            if kde:
-                # get the bandwidth method argument for scipy
-                # and run scipy's kde
-                kde = ss.kde.gaussian_kde(theta, bw_method=kwargs.get('bw_method'))
-                xx = np.linspace(np.min(theta), np.max(theta), 200)
-                dens = kde(xx)
-                plt.plot(xx, dens)
-                plt.axvline(xx[np.argmax(dens)], linewidth=1.2, color="m", linestyle=":", label="MAP")
+            plt.axvline(np.mean(theta), linewidth=1.2, color=kwargs['color'], linestyle="--", label="mean")
+            plt.axvline(xx[np.argmax(dens)], linewidth=1.2, color=kwargs['color'], linestyle=":", label="MAP")
 
             # label of axis
-            if xlim:
-                plt.xlim(xlim[plot_id])
-            if ylim:
-                plt.ylim(ylim)
+            if kwargs.get('xlim'):
+                plt.xlim(kwargs.get('xlim')[plot_id])
+            if kwargs.get('ylim'):
+                plt.ylim(kwargs.get('ylim'))
             plt.xlabel(names[plot_id])
             plt.legend(loc="upper right")
 
-        fig.suptitle("Posterior for all model parameters for \n {} with\n".format(
+        fig.suptitle("ABC Posterior for sampler \n{} with\n".format(
             type(sampler).__name__) + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
             np.round(threshold, 4),
             sampler.Thetas.shape[0]
@@ -69,11 +84,8 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
-    ylim = kwargs.get('ylim', None)
-    xlim = kwargs.get('xlim', None)
-
     if isinstance(sampler, pyabc.BaseSampler):
-        fig = _plot_thetas(sampler.Thetas, sampler.threshold, bins, xlim, ylim)
+        fig = _plot_thetas(sampler.Thetas, sampler.threshold)
     else:
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
@@ -84,7 +96,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, kde=True, normed=
                 for t
                 in
                 range(sampler.particles[0].shape[1])]
-            _plot_thetas(sampler.particles[epoch], threshold, bins, xlim, ylim)
+            _plot_thetas(sampler.particles[epoch], threshold)
 
     return fig
 
