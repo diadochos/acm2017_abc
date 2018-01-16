@@ -78,7 +78,7 @@ class BOLFI(BaseSampler):
         if self.acqusition_type == 'maxvar':
             acquisition = MaxPosteriorVariance(model, space, self.priors, eps=self.threshold, optimizer=acquisition_optimizer)
         elif self.acqusition_type == 'lcb':
-            acquisition = GPyOpt.acquisitions.AcquisitionLCB(model, space, optimizer=acquisition_optimizer, exploration_weight=10)
+            acquisition = GPyOpt.acquisitions.AcquisitionLCB(model, space, optimizer=acquisition_optimizer, exploration_weight=2)
 
         evaluator = GPyOpt.core.evaluators.Sequential(acquisition)
 
