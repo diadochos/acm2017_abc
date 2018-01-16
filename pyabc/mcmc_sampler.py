@@ -50,6 +50,7 @@ class MCMCSampler(BaseSampler):
         self._nr_iter = 0
         self._Thetas = np.empty(0)
         self._simtime = 0
+        self._runtime = 0
 
     def _run_mcmc_sampling(self, step_size):
         X = self.observation
