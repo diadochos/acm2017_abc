@@ -49,8 +49,9 @@ class RejectionSampler(BaseSampler):
         self._nr_iter = 0
         self._Thetas = np.empty(0)
         self._simtime = 0
+        self._runtime = 0
 
-    def _run_rejection_sampling(self, nr_samples, batch_size):
+    def _run_rejection_sampling(self, batch_size):
         """the abc rejection sampling algorithm with batches"""
 
         # observed data and their summary statistics
@@ -65,11 +66,11 @@ class RejectionSampler(BaseSampler):
         accepted_thetas = []
         distances = []
 
-        start = time.clock()
+        starttime = time.clock()
 
         nr_batches = 0
 
-        while len(accepted_thetas) < nr_samples:
+        while len(accepted_thetas) < self.nr_samples:
             nr_batches += 1
 
             # draw batch_size parameters from priors
@@ -85,23 +86,22 @@ class RejectionSampler(BaseSampler):
             accepted_thetas.extend(thetas_batch[d_batch <= self.threshold])
             distances.extend(d_batch[d_batch <= self.threshold])
 
-            if self.verbosity == 2:
-                print("batch: [{}] ".format(nr_batches))
-                print("thetas: {}".format(thetas_batch))
-                print("summaries: {}".format(summaries_batch))
-                print("distances: {}".format(d_batch))
-                print("accepted thetas: {}".format(accepted_thetas))
+            self._runtime = (time.clock() - starttime)
+            self._nr_iter += batch_size
+            self._acceptance_rate = len(accepted_thetas) / self.nr_iter
+
+            self.log(accepted_thetas, False) # after each batch
 
         # we only want nr_samples samples. throw away what's too much
-        accepted_thetas = accepted_thetas[:nr_samples]
+        accepted_thetas = accepted_thetas[:self.nr_samples]
         thetas = np.array(accepted_thetas)
 
-        self._runtime = time.clock() - start
+        self._runtime = time.clock() - starttime
 
         self._nr_iter = (nr_batches * batch_size)
-        self._acceptance_rate = nr_samples / self.nr_iter
+        self._acceptance_rate = self.nr_samples / self.nr_iter
         self._Thetas = thetas
-        self._distances = distances[:nr_samples]
+        self._distances = distances[:self.nr_samples]
         return thetas
 
     def sample(self, threshold, nr_samples, batch_size=1000):
@@ -117,19 +117,40 @@ class RejectionSampler(BaseSampler):
 
         """
         self.threshold = threshold
+        self.nr_samples = nr_samples
 
         if self.verbosity:
             print("Rejection sampler started with threshold: {} and number of samples: {}".format(self.threshold,
-                                                                                                  nr_samples))
+                                                                                                  self.nr_samples))
 
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
-        self._run_rejection_sampling(nr_samples, batch_size)
+        self._run_rejection_sampling(batch_size)
 
-        if self.verbosity:
+        self.log(final=True)
+
+    def log(self, accepted_thetas=[], final=False):
+
+        if self.verbosity > 1 and not final:
+            print("Samples: %6d / %6d (%3d %%)- Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
+                len(accepted_thetas),
+                self.nr_samples,
+                int(np.round(len(accepted_thetas) / self.nr_samples * 100)), 
+                self.threshold, 
+                self.nr_iter, 
+                self.acceptance_rate, 
+                self.runtime)
+            )
+
+        if final:
             print("Samples: %6d - Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
-                nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
+                self.nr_samples, 
+                self.threshold, 
+                self.nr_iter, 
+                self.acceptance_rate,
+                self.runtime)
+            )
 
     def __str__(self):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(

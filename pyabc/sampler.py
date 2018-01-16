@@ -205,9 +205,13 @@ class BaseSampler(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def _reset(self):
+    def log(self):
         pass
 
+    @abc.abstractmethod
+    def _reset(self):
+        pass
+    
     def save(self, fname):
         if not isinstance(fname, str):
             raise ValueError("Parameter fname has to be a string.")
