@@ -51,13 +51,13 @@ class MCMCSampler(BaseSampler):
         self._Thetas = np.empty(0)
         self._simtime = 0
 
-    def _run_mcmc_sampling(self, nr_samples, step_size):
+    def _run_mcmc_sampling(self, step_size):
         X = self.observation
         stats_x = flatten_function(self.summaries, X)
         num_priors = len(self.priors)
 
-        thetas = np.zeros((nr_samples, num_priors))
-        distances = np.zeros(nr_samples)
+        thetas = np.zeros((self.nr_samples, num_priors))
+        distances = np.zeros(self.nr_samples)
 
         nr_iter = 0
 
@@ -83,7 +83,7 @@ class MCMCSampler(BaseSampler):
 
         step = np.identity(num_priors) * step_size
 
-        for i in range(1, nr_samples):
+        for i in range(1, self.nr_samples):
             while True:
                 nr_iter += 1
                 theta = thetas[i - 1, :]
@@ -112,10 +112,17 @@ class MCMCSampler(BaseSampler):
                         distances[i] = distances[i - 1]
                     break
                     # step_size = np.cov(thetas[0:i+1,:].T)
+                
+                self._nr_iter = nr_iter
+                self._runtime = time.clock() - start
+                self._acceptance_rate = self.nr_samples / self.nr_iter
+            
+                if nr_iter % 1000 == 0:
+                    self.log(thetas[thetas != 0], False)
 
         self._runtime = time.clock() - start
         self._nr_iter = nr_iter
-        self._acceptance_rate = nr_samples / self.nr_iter
+        self._acceptance_rate = self.nr_samples / self.nr_iter
         self._Thetas = thetas
         self._distances = distances
 
@@ -134,22 +141,43 @@ class MCMCSampler(BaseSampler):
 
         """
         self.threshold = threshold
+        self.nr_samples = nr_samples
 
         if step_size is not None and len(step_size) != len(self.priors):
             raise ValueError('Step size for every prior is required')
 
         if self.verbosity:
             print(
-                "MCMC sampler started with threshold: {} and number of samples: {}".format(self.threshold, nr_samples))
+                "MCMC sampler started with threshold: {} and number of samples: {}".format(self.threshold, self.nr_samples))
 
         self._reset()
 
         # RUN ABC REJECTION SAMPLING
-        self._run_mcmc_sampling(nr_samples, step_size)
+        self._run_mcmc_sampling(step_size)
 
-        if self.verbosity:
+        self.log(final=True)
+
+    def log(self, accepted_thetas=[], final=False):
+
+        if self.verbosity > 1 and not final:
+            print("Samples: %6d / %6d (%3d %%)- Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
+                len(accepted_thetas),
+                self.nr_samples,
+                int(np.round(len(accepted_thetas) / self.nr_samples * 100)), 
+                self.threshold, 
+                self.nr_iter, 
+                self.acceptance_rate, 
+                self.runtime)
+            )
+
+        if final:
             print("Samples: %6d - Threshold: %.4f - Iterations: %10d - Acceptance rate: %4f - Time: %8.2f s" % (
-                nr_samples, self.threshold, self.nr_iter, self.acceptance_rate, self.runtime))
+                self.nr_samples, 
+                self.threshold, 
+                self.nr_iter, 
+                self.acceptance_rate,
+                self.runtime)
+            )
 
     def __str__(self):
         return "{} - priors: {} - simulator: {} - summaries: {} - observation: {} - discrepancy: {} - verbosity: {}".format(
