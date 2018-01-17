@@ -8,7 +8,7 @@ import pyabc
 PLOTS_PER_ROW = 3
 
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, hist_kws={}, kde_kws={}, **kwargs):
+def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, legend=True, hist_kws={}, kde_kws={}, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
@@ -67,7 +67,8 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, hist_kws={}, kde_
             if kwargs.get('ylim'):
                 plt.ylim(kwargs.get('ylim'))
             plt.xlabel(names[plot_id])
-            plt.legend(loc="upper right")
+            if legend:
+                plt.legend(loc="upper right")
 
         fig.suptitle("ABC Posterior for sampler \n{} with\n".format(
             type(sampler).__name__) + r"$\rho(S(X),S(Y)) < {}, n = {}$".format(
@@ -75,12 +76,15 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, hist_kws={}, kde_
             sampler.Thetas.shape[0]
         ), y=0.96)
 
-        plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
+        #plt.tight_layout(rect=[0.05, 0, 0.95, 0.85])
         #plt.show()
         return fig
 
     nr_plots = sampler.Thetas.shape[1]  # number of columns = model parameters
-    nr_rows = (nr_plots // (PLOTS_PER_ROW + 1)) + 1  # has to start by one
+    if (nr_plots % PLOTS_PER_ROW) == 0:
+        nr_rows = nr_plots // PLOTS_PER_ROW
+    else:
+        nr_rows = nr_plots // PLOTS_PER_ROW + 1  # has to start by one
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
