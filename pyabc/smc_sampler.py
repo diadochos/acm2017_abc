@@ -66,7 +66,7 @@ class SMCSampler(BaseSampler):
         """
 
         self._thresholds = thresholds
-        self._threshold = thresholds[-1]
+        self._threshold = thresholds[-1] # final threshold, to have same attribute as other classes
         self.nr_samples = nr_samples
         print("SMC sampler started with thresholds: {} and number of samples: {}".format(self.thresholds, self.nr_samples))
         self._reset()
@@ -162,9 +162,9 @@ class SMCSampler(BaseSampler):
                         self._acceptance_rate = self.nr_samples / self.nr_iter
 
                         if nr_iter % 1000 == 0:
-                            self.log(t, thetas[t][thetas[t] != 0], False)
+                            self.log(self.thresholds[t], thetas[t][thetas[t] != 0], False)
 
-            self.log(t, thetas[t], False)
+            self.log(self.threshold, thetas[t], False)
             weights[t, :] = weights[t, :] / sum(weights[t, :])
             sigma[t, :, :] = 2 * np.cov(thetas[t, :, :].T, aweights=weights[t, :])
 
