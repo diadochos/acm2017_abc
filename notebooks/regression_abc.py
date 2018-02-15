@@ -23,15 +23,34 @@ class MDN(nn.Module):
         out_mu = self.mu_out(out)
         return (out_pi, out_sigma, out_mu)
     
-    def pdf(self, x_test, xx):
-        (out_pi_test, out_sigma_test, out_mu_test) = self(x_test)
+    def pdf(self, x, theta):
+        (out_pi_test, out_sigma_test, out_mu_test) = self(x)
 
         out_pi = out_pi_test.data.numpy().T
         out_sigma = out_sigma_test.data.numpy().T
         out_mu = out_mu_test.data.numpy().T
 
-        pdf = np.array([ss.norm.pdf(xx, mu, sigma) * pi for mu, sigma, pi in zip(out_mu, out_sigma, out_pi)])
+        pdf = np.array([ss.norm.pdf(theta, mu, sigma) * pi for mu, sigma, pi in zip(out_mu, out_sigma, out_pi)])
         return pdf.sum(axis=0)
+    
+    def sample(x, n):
+        (out_pi_test, out_sigma_test, out_mu_test) = model(x)
+
+        out_pi = out_pi_test.data.numpy().T
+        out_sigma = out_sigma_test.data.numpy().T
+        out_mu = out_mu_test.data.numpy().T
+
+        data = np.zeros((n, out_pi.size))
+
+        num_distr= out_pi.size
+
+        for idx, distr in enumerate(zip(out_mu, out_sigma)):
+            mu, sigma = distr
+            data[:, idx] = np.random.normal(mu, sigma, size=n)
+        random_idx = np.random.choice(np.arange(num_distr), size=(n,), p=out_pi[:,0])
+        sample = data[np.arange(n), random_idx]
+        return sample
+        
     
     
 oneDivSqrtTwoPI = 1.0 / np.sqrt(2.0*np.pi) # normalisation factor for gaussian.
