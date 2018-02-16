@@ -33,8 +33,8 @@ class MDN(nn.Module):
         pdf = np.array([ss.norm.pdf(theta, mu, sigma) * pi for mu, sigma, pi in zip(out_mu, out_sigma, out_pi)])
         return pdf.sum(axis=0)
     
-    def sample(x, n):
-        (out_pi_test, out_sigma_test, out_mu_test) = model(x)
+    def sample(self, x, n):
+        (out_pi_test, out_sigma_test, out_mu_test) = self(x)
 
         out_pi = out_pi_test.data.numpy().T
         out_sigma = out_sigma_test.data.numpy().T
