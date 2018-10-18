@@ -13,7 +13,7 @@ The `pyabc` package provides the following sampling-based ABC algorithms:
 
 In addition, it implements a more recent approach called [Bayesian Optimization for Likelihood Free Inference (BOLFI)](http://arxiv.org/abs/1501.03291).
 
-There are also first attempts at implementing [Regression ABC](http://arxiv.org/abs/1605.06376) methods in PyTorch (see this [notebood](https://github.com/compercept/acm2017_abc/blob/master/notebooks/RegressionABC.ipynb)).
+There are also first attempts at implementing a Regression ABC method called [Bayesian Conditional Density Estimation Using Mixture Density Networks](http://arxiv.org/abs/1605.06376) methods in PyTorch (see this [notebood](https://github.com/compercept/acm2017_abc/blob/master/notebooks/RegressionABC.ipynb)).
 
 We also implemented a framework for toy problems that provides access to simulator functions and summary statistics and is easy to new problems. The following examples from the ABC literature are already implemented:
 - [Mixture of Gaussians](http://www.pnas.org/cgi/doi/10.1073/pnas.0607208104)
