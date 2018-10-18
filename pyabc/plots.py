@@ -8,7 +8,7 @@ import pyabc
 PLOTS_PER_ROW = 3
 
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, legend=True, hist_kws={}, kde_kws={}, **kwargs):
+def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, legend=True, density=True, hist_kws={}, kde_kws={}, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
@@ -53,10 +53,12 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, legend=True, hist
             # plot KDE and MAP
             # get the bandwidth method argument for scipy
             # and run scipy's kde
+            
             kde = ss.kde.gaussian_kde(theta, bw_method=kde_kws.get('bw_method'), **kde_kws)
             xx = np.linspace(np.min(theta), np.max(theta), 200)
             dens = kde(xx)
-            plt.plot(xx, dens, color=kwargs['color'], label="ABC posterior")
+            if density:
+                plt.plot(xx, dens, color=kwargs['color'], label="ABC posterior")
             # plot mean
             plt.axvline(np.mean(theta), linewidth=1.2, color=kwargs['color'], linestyle="--", label="mean")
             plt.axvline(xx[np.argmax(dens)], linewidth=1.2, color=kwargs['color'], linestyle=":", label="MAP")
