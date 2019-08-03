@@ -3,12 +3,12 @@ import numpy as np
 import scipy.stats as ss
 import itertools
 
-import pyabc
+import acm2017_pyabc
 
 PLOTS_PER_ROW = 3
 
 
-def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, legend=True, density=True, hist_kws={}, kde_kws={}, **kwargs):
+def plot_marginals(sampler: acm2017_pyabc.BaseSampler, plot_all=False, legend=True, density=True, hist_kws={}, kde_kws={}, **kwargs):
     """take a sampler and plot the posterior distribution for all model parameter thetas
     :param sampler: instance of BaseSampler
     :param plot_all: true - plot all thetas for all iterations, false - only plot thetas of last round
@@ -90,12 +90,12 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, legend=True, dens
 
     names = np.hstack((np.atleast_1d(p.name) for p in sampler.priors))
 
-    if isinstance(sampler, pyabc.BaseSampler):
+    if isinstance(sampler, acm2017_pyabc.BaseSampler):
         fig = _plot_thetas(sampler.Thetas, sampler.threshold)
     else:
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
-    if isinstance(sampler, pyabc.SMCSampler) & plot_all:
+    if isinstance(sampler, acm2017_pyabc.SMCSampler) & plot_all:
         for epoch, threshold in enumerate(sampler.thresholds):
             xlim = kwargs.get('xlim') or [
                 (sampler.particles[0, :, t].min() - 0.1, sampler.particles[0, :, t].max() + 0.1)
@@ -107,7 +107,7 @@ def plot_marginals(sampler: pyabc.BaseSampler, plot_all=False, legend=True, dens
     return fig
 
 
-def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, density_kwds=None, range_padding=0.05,
+def plot_pairs(sampler: acm2017_pyabc.BaseSampler, diagonal='hist', hist_kwds=None, density_kwds=None, range_padding=0.05,
                **kwargs):
     """Plots a scatterplot matrix of subplots.  Each column of "sampler.Thetas" is plotted
     against other columns, resulting in a ncols by ncols grid of subplots with the
@@ -212,7 +212,7 @@ def plot_pairs(sampler: pyabc.BaseSampler, diagonal='hist', hist_kwds=None, dens
     return fig
 
 
-def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True, **kwargs):
+def plot_particles(sampler: acm2017_pyabc.BaseSampler, as_circles=True, equal_axes=True, **kwargs):
     """take a sampler and plot the particles for each iteration as vertical circle plot
 
     :param sampler: instance of BaseSampler
@@ -223,7 +223,7 @@ def plot_particles(sampler: pyabc.BaseSampler, as_circles=True, equal_axes=True,
     if sampler.Thetas.shape == (0,):
         raise Warning("Method was called before sampling was done")
 
-    if not isinstance(sampler, pyabc.SMCSampler):
+    if not isinstance(sampler, acm2017_pyabc.SMCSampler):
         raise TypeError("Type of sampler is unknown.".format(repr(sampler)))
 
     nr_epochs, nr_samples, nr_thetas = sampler.particles.shape

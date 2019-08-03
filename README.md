@@ -4,7 +4,7 @@ Most Bayesian inference methods rely on the ability to calculate the likelihood,
 
 This package containt implementation of basic ABC algorithms and standard toy examples for ABC problems.
 
-The `pyabc` package provides the following sampling-based ABC algorithms:
+The `acm2017_pyabc` package provides the following sampling-based ABC algorithms:
 
 - [Rejection ABC](http://www.genetics.org/content/genetics/162/4/2025.full.pdf)
 - [MCMC ABC](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC307566/?tool=pmcentrez&report=abstract)
@@ -21,4 +21,4 @@ We also implemented a framework for toy problems that provides access to simulat
 - [Tuberculosis spread](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1526704/)
 - [Episodic Memory](https://www.sciencedirect.com/science/article/pii/S0022249612000272)
 
-For an introduction on how to perform inference with the `pyabc` package, see the [HowTo](https://github.com/compercept/acm2017_abc/blob/master/HowTo.ipynb) notebook.
+For an introduction on how to perform inference with the `acm2017_pyabc` package, see the [HowTo](https://github.com/compercept/acm2017_abc/blob/master/HowTo.ipynb) notebook.
